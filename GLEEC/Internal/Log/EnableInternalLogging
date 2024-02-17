@@ -1,0 +1,2 @@
+// this is if you wan all *INTERNAL* logging (includes all callbacks)
+#define GLEEC_ALL_INTERNAL_LOGGING 0

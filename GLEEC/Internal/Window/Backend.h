@@ -1,0 +1,5 @@
+#pragma once
+
+#define WINDOW_BACKEND_GLFW 1
+
+#define GLEEC_WINDOW_BACKEND WINDOW_BACKEND_GLFW

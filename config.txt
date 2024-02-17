@@ -1,0 +1,2 @@
+cwd = C:/dev/GLEEC
+shader_dir = cwd . GLEEC/Core/Renderer/Shaders

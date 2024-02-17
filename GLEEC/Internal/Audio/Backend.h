@@ -1,0 +1,5 @@
+#pragma once
+
+#define AUDIO_BACKEND_OPENAL 1
+
+#define GLEEC_AUDIO_BACKEND AUDIO_BACKEND_OPENAL

@@ -1,0 +1,10 @@
+# clangd cache
+.cache/
+
+# premake stuff
+bin/
+bin_int/
+compile_commands/
+compile_commands.json
+dapexe.txt
+premake5.exe

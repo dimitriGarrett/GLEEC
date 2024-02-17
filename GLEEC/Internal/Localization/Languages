@@ -1,0 +1,4 @@
+#pragma once
+
+#define EN 0
+#define SP 1

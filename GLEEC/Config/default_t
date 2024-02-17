@@ -1,0 +1,13 @@
+#pragma once
+
+#include "Config/Architecture.h"
+
+namespace GLEEC
+{
+#if GLEEC64
+    using default_t = double;
+//#elif GLEEC32
+#else
+    using default_t = float;
+#endif
+}
