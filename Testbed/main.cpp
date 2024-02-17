@@ -30,6 +30,7 @@
 #include "Core/Input/Init.h"
 
 #include "Core/Input/Keyboard.h"
+#include "Core/Input/Update.h"
 
 using namespace GLEEC;
 
@@ -86,8 +87,7 @@ int main()
         LOG_INFO("Joystick: {} disconnected!", j.internalJoystick);
     });
 
-    /* make sure everything builds properly and test polling, and then see if i can get it running on linux and start working on reflection,
-
+    /*
          or just do localization but loading from files, which needs done either way
 
         maybe find a way to auto generate locale files by using a translation api, and parses the english file and generates the other one
@@ -100,7 +100,7 @@ int main()
 */
     while (Window::WindowManager::anyOpen())
     {
-        Internal::Input::glfw::pollEvents();
+        Input::update();
     }
 
     Audio::terminate();
