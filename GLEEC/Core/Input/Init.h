@@ -8,6 +8,8 @@
 #error "Unknown Input backend for GLEEC!"
 #endif
 
+#include "JoystickManager.h"
+
 namespace GLEEC::Input
 {
     inline void init()

@@ -1,22 +1,30 @@
 #include "Locale.h"
-#include "Config/Platform.h"
 
-#if GLEEC_WINDOWS
-#include <Windows.h>
-#endif
+#include <fstream>
 
 namespace GLEEC::Internal::Localization
 {
-    int Locale::currentLang = EN;
-    std::vector<std::unordered_map<LocaleKey, Translated>> Locale::locale = {};
-
-    void Locale::init()
+    void Locale::load(std::string_view filepath)
     {
-        locale.resize(SP + 1);
+        std::ifstream file(filepath.data());
 
-        // to ensure utf8 output is received correctly
-#if GLEEC_WINDOWS
-        SetConsoleOutputCP(CP_UTF8);
-#endif
+        if (!file.is_open())
+        {
+            LOG_WARNING("Language file: {}, was not found!", filepath); return;
+        }
+
+        std::string line = "";
+
+        std::string key = "";
+        std::string translated = "";
+        while (std::getline(file, line))
+        {
+            key = line.substr(0, line.find(':'));
+
+            size_t first = line.find_first_of('\"');
+            translated = line.substr(first + 1, line.find_last_of('\"') - first - 1);
+
+            strings[utility::hash(key.c_str())] = translated;
+        }
     }
 }

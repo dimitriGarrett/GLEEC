@@ -1,0 +1,28 @@
+#pragma once
+
+// english
+#define EN ::GLEEC::Internal::utility::hash("en")
+
+// spanish
+#define ES ::GLEEC::Internal::utility::hash("es")
+
+// german
+#define DE ::GLEEC::Internal::utility::hash("de")
+
+// swedish
+#define SV ::GLEEC::Internal::utility::hash("sv")
+
+// russian
+#define RU ::GLEEC::Internal::utility::hash("ru")
+
+// japanese
+#define JA ::GLEEC::Internal::utility::hash("ja")
+
+// italian
+#define IT ::GLEEC::Internal::utility::hash("it")
+
+// french
+#define FR ::GLEEC::Internal::utility::hash("fr")
+
+// chinese
+#define ZH ::GLEEC::Internal::utility::hash("zh")

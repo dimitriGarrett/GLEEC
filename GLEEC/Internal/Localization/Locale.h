@@ -1,49 +1,62 @@
 #pragma once
 
 #include "Config/Export.h"
+#include "LangString.h"
 
-#include "Translated.h"
-#include "Languages"
-#include "LOCSTR.h"
+#include "Internal/utility/string.h"
 
-#include <vector>
+#include <string_view>
 #include <unordered_map>
+
+#include "Internal/Log/Log.h"
 
 namespace GLEEC::Internal::Localization
 {
-    using LocaleKey = utility::hash_t;
-
     struct Locale
     {
-        GLEEC_API static void init();
+        std::unordered_map<utility::hash_t, LangString> strings = {};
 
-        static void setLang(int lang)
+        LangStringView get(utility::hash_t key)
         {
-            currentLang = lang;
+            if (strings.contains(key))
+            {
+                return strings.at(key);
+            }
+
+            LOG_WARNING("Attempted to access Locale string: {}, but it doesn't exist!", key);
+
+            return (strings[key] =
+            std::format("Unknown Translation Key: {}!", key));
         }
 
-        static std::string getString(LocaleKey phrase)
+        LangStringView get(std::string_view name)
         {
-            return locale[currentLang][phrase].str;
+            utility::hash_t key = utility::hash(name.data());
+
+            if (strings.contains(key))
+            {
+                return strings.at(key);
+            }
+
+            LOG_WARNING("Attempted to access Locale string: {}, but it doesn't exist!", name);
+
+            return (strings[key] =
+            std::format("Unknown Translation Key: {}!", name));
         }
 
-        static void setString(int lang, LocaleKey phrase, std::string string)
+        LangStringView get(utility::hash_t key, std::string_view name)
         {
-            locale[lang][phrase].str = string;
+            if (strings.contains(key))
+            {
+                return strings.at(key);
+            }
+
+            LOG_WARNING("Attempted to access Locale string: {}, but it doesn't exist!", name);
+
+            return (strings[key] =
+            std::format("Unknown Translation Key: {}!", name));
         }
 
-        GLEEC_API static int currentLang;
-        GLEEC_API static std::vector<std::unordered_map<LocaleKey, Translated>> locale;
+        GLEEC_API void load(std::string_view filepath);
     };
 }
-
-#define LOCALIZE(lang, phrase, str) ::GLEEC::Internal::Localization::Locale::setString(lang, LOCSTR(phrase), str)
-#define LOCALIZED(phrase) ::GLEEC::Internal::Localization::Locale::getString(LOCSTR(phrase))
-
-#define LOCALIZE_EN(phrase, str) LOCALIZE(EN, phrase, str)
-#define LOCALIZE_SP(phrase, str) LOCALIZE(SP, phrase, str)
-
-#define LOCALE(lang) ::GLEEC::Internal::Localization::Locale::setLang(lang)
-
-#define LOCALE_EN() LOCALE(EN)
-#define LOCALE_SP() LOCALE(SP)
