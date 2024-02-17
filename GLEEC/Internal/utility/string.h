@@ -2,6 +2,8 @@
 
 #include "PP/Architecture.h"
 
+using size_t = decltype(sizeof(nullptr)); // i dont wanna include cstddef :)
+
 namespace GLEEC::Internal::utility
 {
 	inline constexpr size_t npos = static_cast<size_t>(-1);

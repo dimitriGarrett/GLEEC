@@ -1,5 +1,3 @@
-require("compile_commands.export-compile-commands")
-
 outputdir = "%{cfg.buildcfg}"
 
 workspace "GLEEC"
@@ -44,28 +42,36 @@ workspace "GLEEC"
         "deps/OPENAL/include",
         "deps/SNDFILE/include",
         "deps/STB/include",
-        "deps/VULKAN/include"
+        "deps/VULKAN/include",
     }
 
-    libdirs
-    {
-        "deps/FREETYPE/lib",
-        "deps/GLFW/lib",
-        "deps/OPENAL/lib",
-        "deps/SNDFILE/lib",
-        "deps/VULKAN/lib",
-    }
+    filter "system:windows"
+        libdirs
+        {
+            "deps/FREETYPE/lib",
+            "deps/GLFW/lib",
+            "deps/OPENAL/lib",
+            "deps/SNDFILE/lib",
+            "deps/VULKAN/lib",
+        }
 
-    links
-    {
-        "freetype",
-        "glfw3dll",
-        "OpenAL32",
-        "OpenGL32",
-        "sndfile",
-        "shaderc_sharedd",
-        "vulkan-1",
-    }
+        links
+        {
+            "freetype",
+            "glfw3dll",
+            "OpenAL32",
+            "sndfile",
+            "shaderc_sharedd",
+            "vulkan-1",
+        }
+
+    filter "system:Unix"
+        links
+        {
+            "glfw",
+            "openal",
+            "sndfile",
+        }
 
 project "GLEEC"
     kind "SharedLib"
@@ -85,6 +91,8 @@ project "Testbed"
         
     links { "GLEEC" }
 
+    filter "system:windows"
+ 
     postbuildcommands
     {
         "{COPYFILE} " .. outputdir .. "/GLEEC/GLEEC.dll " .. outputdir .. "/%{prj.name}/GLEEC.dll",

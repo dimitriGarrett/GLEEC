@@ -16,6 +16,7 @@
 
     #define GLEEC_API_EXTERN GLEEC_API extern
 #else
-    #define GLEEC_API extern
-    #define GLEEC_API_EXTERN GLEEC_API
+    // on linux GLEEC_API shouldn't do anything
+    #define GLEEC_API
+    #define GLEEC_API_EXTERN extern
 #endif

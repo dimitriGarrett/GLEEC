@@ -362,7 +362,12 @@ typedef	struct sf_private_tag	SNDFILE ;
 ** and the Microsoft compiler.
 */
 
+// don't wanna recompile on linux ahahah
+#ifdef _WIN32
 typedef __int64	sf_count_t ;
+#else
+typedef __int64_t sf_count_t ;
+#endif
 #ifndef SF_COUNT_MAX
 #define SF_COUNT_MAX		0x7FFFFFFFFFFFFFFFLL
 #endif

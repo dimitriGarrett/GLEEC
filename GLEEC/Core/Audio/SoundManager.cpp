@@ -7,7 +7,11 @@ namespace GLEEC::Audio
 {
     std::unordered_map<size_t, Sound> SoundManager::sounds = {};
 
-    inline SoundInfo SoundManager::loadSound(std::string_view filepath)
+    // problem because it is inline, fix not found yet
+#ifndef GLEEC_LINUX
+    inline
+#endif
+    SoundInfo SoundManager::loadSound(std::string_view filepath)
     {
         SndfileHandle handle(filepath.data());
 
@@ -26,7 +30,11 @@ namespace GLEEC::Audio
         return temp;
     }
 
-    inline void SoundManager::unloadSound(SoundInfo& soundInfo)
+    // problem because it is inline, fix not found yet
+#ifndef GLEEC_LINUX
+    inline
+#endif
+    void SoundManager::unloadSound(SoundInfo& soundInfo)
     {
         soundInfo.data.clear(); // it should be in the audio card ram or something
                                 // like that, so unload it from ram

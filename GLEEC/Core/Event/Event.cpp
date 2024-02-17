@@ -12,7 +12,7 @@
 
 namespace GLEEC::Event
 {
-    inline void init()
+    void init()
     {
 #if GLEEC_WINDOW_BACKEND == WINDOW_BACKEND_GLFW
         addListener<Internal::Events::MonitorConnectedEvent>(+[](Internal::Window::glfw::Monitor m)

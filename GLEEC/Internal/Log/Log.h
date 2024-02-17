@@ -8,6 +8,7 @@
 #include <iostream>
 #include <format>
 #include <string>
+#include <cassert>
 
 namespace GLEEC::Internal
 {
@@ -101,7 +102,7 @@ namespace GLEEC::Internal
 
 #if GLEEC_DEBUG
             if (type == LOG_ERROR)
-                __debugbreak();
+	    	assert(false);
 #endif
         }
 
@@ -116,7 +117,7 @@ namespace GLEEC::Internal
 
 #if GLEEC_DEBUG
             if (type == LOG_ERROR)
-                __debugbreak();
+	    	assert(false);
 #endif
         }
     };
