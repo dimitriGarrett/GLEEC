@@ -30,7 +30,7 @@ namespace GLEEC::Input
             Event::addListener<Event::JoystickConnected>(+[](Joystick j)
             {
                 joysticks.push_back(j);
-            });
+            }, -1);
 
             Event::addListener<Event::JoystickDisconnected>(+[](Joystick j)
             {
@@ -47,7 +47,7 @@ namespace GLEEC::Input
                     }
                 }
 #endif
-            });
+            }, -1);
         }
 
         GLEEC_API static std::vector<Joystick> joysticks;

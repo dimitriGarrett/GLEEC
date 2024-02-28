@@ -9,11 +9,12 @@ namespace GLEEC::Window
     {
         MonitorManager::init();
 
-        WindowManager::registerCallbacks();
+        WindowManager::init();
     }
 
     inline void terminate()
     {
         // nothing here (used to be)
+        WindowManager::destroy();
     }
 }

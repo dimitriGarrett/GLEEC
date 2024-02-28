@@ -3,8 +3,6 @@
 #include "Internal/Window/Events.h"
 #include "Internal/Window/Monitor.h"
 
-#include "Internal/Event/Subway.h"
-
 namespace GLEEC::Internal::Window::glfw
 {
     using Window = GLFWwindow*;
@@ -13,8 +11,6 @@ namespace GLEEC::Internal::Window::glfw
     inline Window createWindow(const math::ivec2& dimensions, std::string_view title, Monitor monitor = nullptr)
     {
         Window temp = { glfwCreateWindow(dimensions.x, dimensions.y, title.data(), monitor, nullptr) };
-
-        Event::fireEvent<Events::WindowCreated>(temp);
 
         return temp;
     }

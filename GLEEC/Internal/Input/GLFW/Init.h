@@ -2,11 +2,6 @@
 
 #include "Internal/Window/Monitor.h"
 
-#include "Internal/Window/Callbacks.h"
-#include "Internal/Input/Callbacks.h"
-
-#include "Internal/Input/GLFW/Mode.h"
-
 namespace GLEEC::Internal::Input::glfw
 {
     enum class PHYSICAL_ERROR : int
@@ -29,8 +24,6 @@ namespace GLEEC::Internal::Input::glfw
         PHYSICAL_ERROR error = {};
         std::string error_desc = "";
     };
-
-    using ErrorCallback = void(*)(int, const char*);
 
     inline void setErrorCallback()
     {
@@ -81,20 +74,8 @@ namespace GLEEC::Internal::Input::glfw
 
         if (i)
         {
-            Window::glfw::setMonitorCallback();
-
             LOG_INFO("glfw has been initialized!");
         }
-
-        Event::addListener<Events::WindowCreated>(+[](Window::glfw::Window window)
-        {
-            Window::glfw::setAllWindowCallbacks(window);
-            Input::glfw::setAllCallbacks(window);
-
-#if GLEEC_INPUT_BACKEND == INPUT_BACKEND_GLFW
-            Input::glfw::setInputMode(window, GLFW_LOCK_KEY_MODS, GLFW_TRUE);
-#endif
-        });
 
         return i;
     }

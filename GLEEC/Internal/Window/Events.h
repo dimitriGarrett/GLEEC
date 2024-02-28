@@ -5,6 +5,7 @@ namespace GLEEC::Internal::Events
     struct WindowPosEvent {};
     struct WindowResizeEvent {};
     struct WindowCloseEvent {};
+    struct WindowOpenedEvent;
     struct WindowRefreshEvent {};
     struct WindowFocusEvent {};
     struct WindowLostFocusEvent {};
@@ -19,6 +20,4 @@ namespace GLEEC::Internal::Events
 
     struct MonitorConnectedEvent {};
     struct MonitorDisconnectedEvent {};
-
-    struct WindowCreated;
 }

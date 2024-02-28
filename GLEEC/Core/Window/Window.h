@@ -8,6 +8,24 @@
 #error "Unknown Window backend for GLEEC!"
 #endif
 
+#include "Internal/Input/Backend.h"
+
+#if GLEEC_INPUT_BACKEND == INPUT_BACKEND_GLFW
+#include "Internal/Input/GLFW/Mode.h"
+#else
+#error "Unknown Input backend for GLEEC!"
+#endif
+
+#include "Internal/Graphics/Backend.h"
+
+#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
+#include "Internal/Graphics/vk/Surface.h"
+#include "Internal/Graphics/vk/Swapchain.h"
+#endif
+
+#include "Core/Graphics/InstanceManager.h"
+#include "Core/Graphics/GPUManager.h"
+
 #include "WindowInfo.h"
 #include "Core/Image/Image.h"
 
@@ -19,7 +37,12 @@ namespace GLEEC::Window
         Internal::Window::glfw::Window internalWindow = nullptr;
 #endif
 
-        Window() = default;
+#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
+        Internal::Graphics::vk::Surface surface = {};
+        Internal::Graphics::vk::Swapchain swapchain = {};
+#endif
+
+        bool vSync = true;
 
         bool operator==(const Window&) const = default;
         bool operator!=(const Window&) const = default;
@@ -145,29 +168,19 @@ namespace GLEEC::Window
 
         void monitor(Monitor mom) const
         {
-#if GLEEC_WINDOW_BACKEND == WIDNOW_BACKEND_GLFW
+#if GLEEC_WINDOW_BACKEND == WINDOW_BACKEND_GLFW
             Internal::Window::glfw::setWindowMonitor(internalWindow, mom.internalMonitor, pos(), size());
 #endif
         }
 
 #if GLEEC_WINDOW_BACKEND == WINDOW_BACKEND_GLFW
-        Window(WindowInfo info)
+        Window() = default;
+        Window(GLFWwindow* w)
+            : internalWindow(w)
         {
-            Internal::Window::glfw::windowHint(GLFW_RESIZABLE, info.resizable);
-
-            // we don't use OpenGL around here
-            Internal::Window::glfw::windowHint(GLFW_CLIENT_API, GLFW_NO_API);
-            // its vulkan time baby
-
-            internalWindow = Internal::Window::glfw::createWindow(info.dim, info.name, info.monitor.internalMonitor);
-
-            if (info.vSync)
-            {
-                // TODO: THIS NEEDS TO BE HANDLED WITH THE VULKAN WINDOW
-            }
         }
-#else
-        Window(WindowInfo) {}
 #endif
+
+        bool minimized = false;
     };
 }

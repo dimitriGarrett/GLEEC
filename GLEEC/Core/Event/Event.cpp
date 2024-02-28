@@ -1,186 +1,314 @@
 #include "Event.h"
 
-#include "Core/Window/WindowManager.h"
+#include "Core/Window/WindowManager.h" 
+
+#if GLEEC_INPUT_BACKEND == INPUT_BACKEND_GLFW
+#include "Internal/Input/Keyboard.h"
+#include "Internal/Input/Joystick.h"
+#endif
+
 #include "Core/Input/Remapping/Remapper.h"
 
-#include "Events.h"
-#include "Internal/Input/Events.h"
-
-#include "Internal/Window/Monitor.h"
-
-#include "Core/Input/Joystick.h"
+#include "Internal/Log/EnableInternalLogging"
 
 namespace GLEEC::Event
 {
     void init()
     {
+        addListener<WindowCreate>(+[](Window::Window window)
+        {
+#if GLEEC_INPUT_BACKEND == INPUT_BACKEND_GLFW
+            glfwSetMouseButtonCallback(window.internalWindow, +[](GLFWwindow* w, int button, int action, int mods)
+            {
+                Input::Remapper& rp = Input::Remapper::currentPreset();
+
+                if (action == GLFW_PRESS)
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Window: {}) mouse button pressed: {}, mods: {}", static_cast<void*>(w), button, mods);
+#endif
+                    Event::fireEvent<MousePressed>(
+                        rp.remap({ mods, button }).state,
+                        rp.remap({ mods, button }).mods);
+                }
+
+                else if (action == GLFW_REPEAT)
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Window: {}) mouse button repeated: {}, mods: {}", static_cast<void*>(w), button, mods);
+#endif
+                    Event::fireEvent<MouseRepeat>(
+                        rp.remap({ mods, button }).state,
+                        rp.remap({ mods, button}).mods);
+                }
+                
+                else
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Window: {}) mouse button released: {}, mods: {}", static_cast<void*>(w), button, mods);
+#endif
+                    Event::fireEvent<MouseReleased>(
+                        rp.remap({ mods, button }).state,
+                        rp.remap({ mods, button }).mods);
+                }
+            });
+
+            glfwSetCursorPosCallback(window.internalWindow, +[](GLFWwindow* w, double x, double y)
+            {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                LOG_INFO("(Window: {}) cursor moved, x: {}, y: {}", static_cast<void*>(w), x, y);
+#endif
+                Event::fireEvent<CursorPos>(x, y);
+            });
+
+            glfwSetCursorEnterCallback(window.internalWindow, +[](GLFWwindow* w, int enter)
+            {
+                if (enter)
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Window: {}) cursor entered!", static_cast<void*>(w));
+#endif
+                    Event::fireEvent<CursorEnter>();
+                }
+
+                else
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Window: {}) cursor left!", static_cast<void*>(w));
+#endif
+                    Event::fireEvent<CursorLeave>();
+                }
+            });
+
+            glfwSetScrollCallback(window.internalWindow, +[](GLFWwindow* w, double x, double y)
+            {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                LOG_INFO("(Window: {}) mouse scrolled, offX: {}, offY: {}", static_cast<void*>(w), x, y);
+#endif
+                Event::fireEvent<Scroll>(x, y);
+            });
+            
+            glfwSetKeyCallback(window.internalWindow, +[](GLFWwindow* w, int key, int scancode, int action, int mods)
+            {
+                Input::Remapper& rp = Input::Remapper::currentPreset();
+                if (action == GLFW_PRESS)
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Window: {}) key pressed, key: \"{}\", scancode: {}, mods: {}", static_cast<void*>(w), key, scancode, mods);
+#endif
+                    Event::fireEvent<KeyPressed>(
+                        rp.remap({ mods, key }).state,
+                        scancode,
+                        rp.remap({ mods, key }).mods);
+                }
+
+                else if (action == GLFW_REPEAT)
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Window: {}) key repeated, key: \"{}\", scancode: {}, mods: {}", static_cast<void*>(w), key, scancode, mods);
+#endif
+                    Event::fireEvent<KeyRepeat>(
+                        rp.remap({ mods, key }).state,
+                        scancode,
+                        rp.remap({ mods, key}).mods);
+                }
+
+                else
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Window: {}) key released, key: \"{}\", scancode: {}, mods: {}", static_cast<void*>(w), key, scancode, mods);
+#endif
+                    Event::fireEvent<KeyReleased>(
+                        rp.remap({ mods, key }).state,
+                        scancode,
+                        rp.remap({ mods, key }).mods);
+                }
+            });
+
+            glfwSetCharCallback(window.internalWindow, +[](GLFWwindow* w, unsigned int codepoint)
+            {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                LOG_INFO("(Window: {}) character pressed, codepoint: {}", static_cast<void*>(w), codepoint);
+#endif
+                Event::fireEvent<Char>(codepoint);
+            });
+
+            glfwSetCharModsCallback(window.internalWindow, +[](GLFWwindow* w, unsigned int codepoint, int mods)
+            {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                LOG_INFO("(Window: {}) character pressed, codepoint: {}, mods: {}", static_cast<void*>(w), codepoint, mods);
+#endif
+                Event::fireEvent<CharMods>(codepoint, mods);
+            });
+
+            glfwSetDropCallback(window.internalWindow, +[](GLFWwindow* w, int count, const char** paths)
+            {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                LOG_INFO("(Window: {}) had paths dropped:", static_cast<void*>(w));
+                for (int i = 0; i < count; ++i)
+                    LOG_INFO("\t\"{}\"", paths[i]);
+#endif
+                Event::fireEvent<Drop>(Window::Window{ w },
+                    std::vector<const char*>(paths, paths + count));
+            });
+
+            glfwSetJoystickCallback(+[](int jid, int event)
+            {
+                if (event == GLFW_CONNECTED)
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("Joystick (jid: {}) connected!", jid);
+
+                    if (!Internal::Input::glfw::joystickIsGamepad(jid))
+                    {
+                        LOG_ERROR("Joystick (jid: {}) does not have a gamepad mapping, don't know what to do!", jid);
+                    }
+#endif
+                    Event::fireEvent<JoystickConnected>(jid);
+                }
+
+                else
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("Joystick (jid: {}) disconnected!", jid);
+#endif
+                    Event::fireEvent<JoystickDisconnected>(jid);
+                }
+            });
+#endif
+
 #if GLEEC_WINDOW_BACKEND == WINDOW_BACKEND_GLFW
-        addListener<Internal::Events::MonitorConnectedEvent>(+[](Internal::Window::glfw::Monitor m)
-        {
-            fireEvent<MonitorConnected>(Window::Monitor{ m });
-        });
-
-        addListener<Internal::Events::MonitorDisconnectedEvent>(+[](Internal::Window::glfw::Monitor m)
-        {
-            fireEvent<MonitorDisconnected>(Window::Monitor{ m });
-        });
-
-        addListener<Internal::Events::WindowPosEvent>(+[](Internal::Window::glfw::Window w, int x, int y)
-        {
-            fireEvent<WindowPos>(
-                Window::WindowManager::findWindow(w), x, y);
-        });
-
-        addListener<Internal::Events::WindowResizeEvent>(+[](Internal::Window::glfw::Window w, int x, int y)
-        {
-            fireEvent<WindowResize>(
-                Window::WindowManager::findWindow(w), x, y);
-        });
-
-        addListener<Internal::Events::WindowCloseEvent>(+[](Internal::Window::glfw::Window w)
-        {
-            fireEvent<WindowClose>(
-                Window::WindowManager::findWindow(w));
-        });
-
-        addListener<Internal::Events::WindowRefreshEvent>(+[](Internal::Window::glfw::Window w)
-        {
-            fireEvent<WindowRefresh>(
-                Window::WindowManager::findWindow(w));
-        });
-
-        addListener<Internal::Events::WindowFocusEvent>(+[](Internal::Window::glfw::Window w)
-        {
-            fireEvent<WindowFocus>(
-                Window::WindowManager::findWindow(w));
-        });
-
-        addListener<Internal::Events::WindowLostFocusEvent>(+[](Internal::Window::glfw::Window w)
-        {
-            fireEvent<WindowLostFocus>(
-                Window::WindowManager::findWindow(w));
-        });
-
-        addListener<Internal::Events::WindowIconifyEvent>(+[](Internal::Window::glfw::Window w)
-        {
-            fireEvent<WindowIconify>(
-                Window::WindowManager::findWindow(w));
-        });
-
-        addListener<Internal::Events::WindowRestoreEvent>(+[](Internal::Window::glfw::Window w)
-        {
-            fireEvent<WindowRestore>(
-                Window::WindowManager::findWindow(w));
-        });
-
-        addListener<Internal::Events::WindowMaximizeEvent>(+[](Internal::Window::glfw::Window w)
-        {
-            fireEvent<WindowMaximize>(
-                    Window::WindowManager::findWindow(w));
-        });
-
-        addListener<Internal::Events::WindowUnmaximizeEvent>(+[](Internal::Window::glfw::Window w)
-        {
-            fireEvent<WindowUnmaximize>(
-                Window::WindowManager::findWindow(w));
-        });
-
-        addListener<Internal::Events::FramebufferSizeEvent>(+[](Internal::Window::glfw::Window w, int width, int height)
-        {
-            fireEvent<FramebufferSize>(
-                Window::WindowManager::findWindow(w), width, height);
-        });
-
-        addListener<Internal::Events::WindowContentScaleEvent>(+[](Internal::Window::glfw::Window w, int width, int height)
-        {
-            fireEvent<WindowContentScale>(
-                Window::WindowManager::findWindow(w), width, height);
-        });
-
-        addListener<Internal::Events::CursorEnterEvent>(+[](Internal::Window::glfw::Window w)
-        {
-            fireEvent<CursorEnter>();
-        });
-
-        addListener<Internal::Events::CursorLeaveEvent>(+[](Internal::Window::glfw::Window w)
-        {
-            fireEvent<CursorLeave>();
-        });
-
-        addListener<Internal::Events::DropEvent>(+[](Internal::Window::glfw::Window w, const std::vector<const char*>& paths)
-        {
-            fireEvent<Drop>(
-                Window::WindowManager::findWindow(w), paths);
-        });
+            glfwSetWindowPosCallback(window.internalWindow, +[](GLFWwindow* w, int x, int y)
+            {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                LOG_INFO("(Window: {}) pos: ({}, {})", static_cast<void*>(w), x, y);
 #endif
+                Event::fireEvent<WindowPos>(Window::Window{ w }, x, y);
+            });
 
-#if GLEEC_INPUT_BACKEND == INPUT_BACKEND_GLFW && GLEEC_WINDOW_BACKEND == WINDOW_BACKEND_GLFW
-        addListener<Internal::Events::MousePressedEvent>(+[](int button, int mods)
-        {
-            Input::Remapper& rp = Input::Remapper::currentPreset();
-
-            fireEvent<MousePressed>(rp.remap({ mods, button }).state, rp.remap({ mods, button }).mods);
-        });
-
-        addListener<Internal::Events::MouseReleasedEvent>(+[](int button, int mods)
-        {
-            Input::Remapper& rp = Input::Remapper::currentPreset();
-
-            fireEvent<MouseReleased>(rp.remap({ mods, button }).state, rp.remap({ mods, button }).mods);
-        });
-
-        addListener<Internal::Events::CursorPosEvent>(+[](double x, double y)
-        {
-            fireEvent<CursorPos>(x, y);
-        });
-
-        addListener<Internal::Events::ScrollEvent>(+[](double x, double y)
-        {
-            fireEvent<Scroll>(x, y);
-        });
-
-        addListener<Internal::Events::KeyPressedEvent>(+[](int key, int scancode, int mods)
-        {
-            Input::Remapper& rp = Input::Remapper::currentPreset();
-
-            fireEvent<KeyPressed>(rp.remap({ mods, key }).state, scancode, rp.remap({ mods, key }).mods);
-        });
-
-        addListener<Internal::Events::KeyRepeatEvent>(+[](int key, int scancode, int mods)
-        {
-            Input::Remapper& rp = Input::Remapper::currentPreset();
-
-            fireEvent<KeyRepeat>(rp.remap({ mods, key }).state, scancode, rp.remap({ mods, key }).mods);
-        });
-
-        addListener<Internal::Events::KeyReleasedEvent>(+[](int key, int scancode, int mods)
-        {
-            Input::Remapper& rp = Input::Remapper::currentPreset();
-
-            fireEvent<KeyReleased>(rp.remap({ mods, key }).state, scancode, rp.remap({ mods, key }).mods);
-        });
-
-        addListener<Internal::Events::CharEvent>(+[](int codepoint)
-        {
-            // no remapping because the whole point is for text input
-            fireEvent<Char>(codepoint);
-        });
-
-        addListener<Internal::Events::CharModsEvent>(+[](int codepoint, int mods)
-        {
-            // no remapping because the whole point is for text input
-            fireEvent<CharMods>(codepoint, mods);
-        });
-
-        addListener<Internal::Events::JoystickConnectedEvent>(+[](int jid)
-        {
-            fireEvent<JoystickConnected>(Input::Joystick(jid));
-        });
-
-        addListener<Internal::Events::JoystickDisconnectedEvent>(+[](int jid)
-        {
-            fireEvent<JoystickDisconnected>(Input::Joystick(jid));
-        });
+            glfwSetWindowSizeCallback(window.internalWindow, +[](GLFWwindow* w, int x, int y)
+            {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                LOG_INFO("(Window: {}) size: ({}, {})", static_cast<void*>(w), x, y);
 #endif
+                Event::fireEvent<WindowResize>(Window::Window{ w }, x, y);
+            });
+
+            glfwSetWindowCloseCallback(window.internalWindow, +[](GLFWwindow* w)
+            {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                LOG_INFO("(Window: {}) closed!", static_cast<void*>(w));
+#endif
+                Event::fireEvent<WindowClose>(Window::Window{ w });
+
+                // having this here makes it hard to predict what will happen
+                // with resources and other window stuff, so it is moved to
+                // windowManager::destroyWindow
+                // destroyWindow(w);
+            });
+
+            glfwSetWindowRefreshCallback(window.internalWindow, +[](GLFWwindow* w)
+            {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                LOG_INFO("(Window: {}) refreshed!", static_cast<void*>(w));
+#endif
+                Event::fireEvent<WindowRefresh>(Window::Window{ w });
+            });
+
+            glfwSetWindowFocusCallback(window.internalWindow, +[](GLFWwindow* w, int focus)
+            {
+                if (focus)
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Window: {}) gained focus!", static_cast<void*>(w));
+#endif
+                    Event::fireEvent<WindowFocus>(Window::Window{ w });
+                }
+
+                else
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Window: {}) lost focus!", static_cast<void*>(w));
+#endif
+                    Event::fireEvent<WindowLostFocus>(Window::Window{ w });
+                }
+            });
+
+            glfwSetWindowIconifyCallback(window.internalWindow, +[](GLFWwindow* w, int iconified)
+            {
+                if (iconified)
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Window: {}) iconified!", static_cast<void*>(w));
+#endif
+                    Event::fireEvent<WindowIconify>(Window::Window{ w });
+                }
+
+                else
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Window: {}) restored!", static_cast<void*>(w));
+#endif
+                    Event::fireEvent<WindowRestore>(Window::Window{ w });
+                }
+            });
+
+            glfwSetWindowMaximizeCallback(window.internalWindow, +[](GLFWwindow* w, int maximized)
+            {
+                if (maximized)
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Window: {}) maximized!", static_cast<void*>(w));
+#endif
+                    Event::fireEvent<WindowMaximize>(Window::Window{ w });
+                }
+
+                else
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Window: {}) unmaximized!", static_cast<void*>(w));
+#endif
+                    Event::fireEvent<WindowUnmaximize>(Window::Window{ w });
+                }
+            });
+
+            glfwSetFramebufferSizeCallback(window.internalWindow, +[](GLFWwindow* w, int width, int height)
+            {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                LOG_INFO("(Window: {}) framebuffer size: ({}, {})", static_cast<void*>(w), width, height);
+#endif
+                Event::fireEvent<FramebufferSize>(Window::Window{ w }, width, height);
+            });
+
+            glfwSetWindowContentScaleCallback(window.internalWindow, +[](GLFWwindow* w, float width, float height)
+            {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                LOG_INFO("(Window: {}) content scale: ({}, {})", static_cast<void*>(w), width, height);
+#endif
+                Event::fireEvent<WindowContentScale>(Window::Window{ w }, width, height);
+            });
+
+            glfwSetMonitorCallback([](GLFWmonitor* m, int event)
+            {
+                if (event == GLFW_CONNECTED)
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Monitor: {}): \"{}\" connected!", static_cast<void*>(m), 
+                        Internal::Window::glfw::getMonitorName(m));
+#endif
+                    Event::fireEvent<MonitorConnected>(Window::Monitor{ m });
+                }
+
+                else
+                {
+#if GLEEC_ALL_INTERNAL_LOGGING
+                    LOG_INFO("(Monitor: {}): \"{}\" disconnected!", static_cast<void*>(m),
+                        Internal::Window::glfw::getMonitorName(m));
+#endif
+                    Event::fireEvent<MonitorDisconnected>(Window::Monitor{ m });
+                }
+            });
+#endif
+        });
     }
 }
