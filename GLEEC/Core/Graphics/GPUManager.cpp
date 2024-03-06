@@ -3,6 +3,7 @@
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
 #include "Internal/Graphics/vk/RequestedDeviceQueue.h"
 #include "Internal/Graphics/vk/Surface.h"
+#include "Internal/Graphics/vk/Extensions.h"
 #endif
 
 #include "InstanceManager.h"
@@ -31,6 +32,8 @@ namespace GLEEC::Graphics
             Internal::Graphics::vk::defaultPreparedQueuesForDevice(
                 activeGPU.device.physicalDevice, surface));
 
+        Internal::Graphics::vk::loadDeviceExtensions(activeGPU.device.device);
+
         activeGPU.graphicsQueue = Internal::Graphics::vk::getDeviceGraphicsQueue(activeGPU.device);
         activeGPU.presentQueue = Internal::Graphics::vk::getDevicePresentQueue(activeGPU.device, Window::WindowManager::windows.front().surface);
 
@@ -41,8 +44,8 @@ namespace GLEEC::Graphics
     void GPUManager::closeGPU()
     {
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-            Internal::Graphics::vk::destroyDevice(activeGPU.device);
-            Internal::Graphics::vk::destroyAllocator(activeGPU.allocator);
+        Internal::Graphics::vk::destroyAllocator(activeGPU.allocator);
+        Internal::Graphics::vk::destroyDevice(activeGPU.device);
 #endif
     }
 }

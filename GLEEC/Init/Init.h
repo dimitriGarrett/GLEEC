@@ -52,5 +52,7 @@ namespace GLEEC
         Audio::terminate();
         Window::terminate();
         Input::terminate();
+
+        Graphics::terminate();
     }
 }

@@ -18,7 +18,7 @@ namespace GLEEC::Graphics
 
         static void destroy()
         {
-            for (int i = 0; i < Window::WindowManager::openWindows; ++i)
+            for (int i = 0; i < renderTargets.size(); ++i)
             {
                 destroyRenderTarget(i);
             }
@@ -36,11 +36,6 @@ namespace GLEEC::Graphics
             initRenderTarget(i);
         }
 
-        static void swap(size_t a, size_t b)
-        {
-            RenderTarget&& fa = std::move(renderTargets[a]);
-            renderTargets[a] = std::move(renderTargets[b]);
-            renderTargets[b] = std::move(fa);
-        }
+        GLEEC_API static void swap(size_t a, size_t b);
     };
 }

@@ -96,15 +96,20 @@ namespace GLEEC::Window
 
     inline void WindowManager::swap(Window& a, Window& b)
     {
+#if GLEEC_WINDOW_BACKEND == WINDOW_BACKEND_GLFW
         std::swap(a.internalWindow, b.internalWindow);
-        std::swap(a.surface, b.surface);
+#endif
+
         std::swap(a.vSync, b.vSync);
 
+#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
+        std::swap(a.surface, b.surface);
         std::swap(a.swapchain.swapchain, b.swapchain.swapchain);
         std::swap(a.swapchain.extent, b.swapchain.extent);
         std::swap(a.swapchain.surfaceFormat, b.swapchain.surfaceFormat);
         std::swap(a.swapchain.images, b.swapchain.images);
         std::swap(a.swapchain.imageViews, b.swapchain.imageViews);
+#endif
     }
 
     void WindowManager::registerCallbacks()

@@ -161,7 +161,7 @@ namespace GLEEC::Internal::Graphics::vk
         return colorImageMemoryBarrier(image,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-            VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
+            VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_READ_BIT);
     }
 /*
     inline VkImageMemoryBarrier2 depthImageMemoryBarrierColorAttachmentToTransferSrc(VkImage image)

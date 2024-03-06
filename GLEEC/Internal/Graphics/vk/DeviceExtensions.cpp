@@ -19,7 +19,9 @@ namespace GLEEC::Internal::Graphics::vk
             VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME,
 #endif
 
-/*             VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME, */
+#if VK_EXT_shader_object
+            VK_EXT_SHADER_OBJECT_EXTENSION_NAME,
+#endif
         };
     }
 }

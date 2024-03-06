@@ -20,12 +20,19 @@ namespace GLEEC::Internal::Graphics::vk
         features13.synchronization2 = VK_TRUE;
         features13.dynamicRendering = VK_TRUE;
 
+        static VkPhysicalDeviceShaderObjectFeaturesEXT shaderObjectFeatures = {
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_FEATURES_EXT
+        };
+        shaderObjectFeatures.shaderObject = VK_TRUE;
+
         return
         {
             PhysicalDeviceFeature
             {
                 &deviceAddressFeatures,
-                { &deviceAddressFeatures.bufferDeviceAddress },
+                {
+                    &deviceAddressFeatures.bufferDeviceAddress
+                },
 #if GLEEC_DEBUG
                 "VkPhysicalDeviceBufferDeviceAddressFeatures"
 #endif
@@ -34,7 +41,9 @@ namespace GLEEC::Internal::Graphics::vk
             PhysicalDeviceFeature
             {
                 &descriptorBufferFeatures,
-                { &descriptorBufferFeatures.descriptorBuffer },
+                {
+                    &descriptorBufferFeatures.descriptorBuffer
+                },
 #if GLEEC_DEBUG
                 "VkPhysicalDeviceDescriptorBufferFeaturesEXT"
 #endif
@@ -50,6 +59,18 @@ namespace GLEEC::Internal::Graphics::vk
 
 #if GLEEC_DEBUG
                 "VkPhysicalDeviceVulkan13Features",
+#endif
+            },
+
+            PhysicalDeviceFeature
+            {
+                &shaderObjectFeatures,
+                {
+                    &shaderObjectFeatures.shaderObject
+                },
+
+#if GLEEC_DEBUG
+                "VkPhysicalDeviceShaderObjectFeatures",
 #endif
             },
         };

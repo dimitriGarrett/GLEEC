@@ -45,14 +45,32 @@ namespace GLEEC::Graphics
         RenderTarget& renderTarget = renderTargets[i];
 
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
+        if (renderTarget.image.image == VK_NULL_HANDLE) return;
+
         Internal::Graphics::vk::destroyImage(
             GPUManager::activeGPU.allocator, renderTarget.image);
 
         Internal::Graphics::vk::destroyImageView(
             GPUManager::activeGPU.device, renderTarget.imageView);
 
+        renderTarget.image.allocation = VK_NULL_HANDLE;
         renderTarget.image.image = VK_NULL_HANDLE;
         renderTarget.imageView = VK_NULL_HANDLE;
+#endif
+    }
+
+    void RenderTargetManager::swap(size_t a, size_t b)
+    {
+        RenderTarget& ra = renderTargets[a];
+        RenderTarget& rb = renderTargets[b];
+
+#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
+        std::swap(ra.imageView, rb.imageView);
+
+        std::swap(ra.image.image, rb.image.image);
+        std::swap(ra.image.allocation, rb.image.allocation);
+        std::swap(ra.image.extent, rb.image.extent);
+        std::swap(ra.image.format, rb.image.format);
 #endif
     }
 }

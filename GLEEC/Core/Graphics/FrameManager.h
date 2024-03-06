@@ -81,11 +81,15 @@ namespace GLEEC::Graphics
             recreateFlags[i] = true;
         }
 
+        // temp TODO: move back to under lastFrame
+        GLEEC_API static uint32_t activeFrame;
     private:
         GLEEC_API static void beginFrame(size_t i);
         GLEEC_API static void endFrame(size_t i);
 
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
+        GLEEC_API static void beginRendering(size_t i);
+
         GLEEC_API static bool batchSubmits();
         GLEEC_API static void batchPresents();
 
@@ -97,7 +101,6 @@ namespace GLEEC::Graphics
 
     #if GLEEC_USE_FRAMES_IN_FLIGHT
         GLEEC_API static uint32_t lastFrame;
-        GLEEC_API static uint32_t activeFrame;
 
         GLEEC_API static std::array<Internal::Graphics::vk::Fence,
             Frame::FRAMES_IN_FLIGHT> fences;

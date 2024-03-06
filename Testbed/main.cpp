@@ -1,3 +1,4 @@
+#include "Core/Graphics/ShaderManager.h"
 #include "Init/Init.h"
 
 #include "Core/Input/Remapping/Remapper.h"
@@ -6,7 +7,10 @@
 
 #include "Core/Graphics/Frame.h"
 
+#include "Internal/Graphics/vk/Extensions.h"
+#include "Internal/Graphics/vk/Shader.h"
 #include "Internal/Time/Time.h"
+#include "vulkan/vulkan_core.h"
 
 using namespace GLEEC;
 
@@ -47,11 +51,24 @@ int main()
 
     double this_frame = 0.0;
 
+    Graphics::ShaderManager::init(
+    {
+        // these shaders needed linked together
+        {
+            "vert.spv", "frag.spv"
+        }
+    });
+
     while (Window::WindowManager::anyOpen())
     {
         this_frame = glfwGetTime();
 
         Graphics::FrameManager::begin();
+
+        Graphics::FrameData& frame = Graphics::FrameManager::frames[0].frames[
+            Graphics::FrameManager::activeFrame];
+
+        vkCmdDraw(frame.commandBuffer, 3, 1, 0, 0);
 
         Graphics::FrameManager::end();
 

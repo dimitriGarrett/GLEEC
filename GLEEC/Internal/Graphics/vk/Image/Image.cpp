@@ -5,7 +5,7 @@ namespace GLEEC::Internal::Graphics::vk
     // too lazy to create a library for vma to export all functions,
     // so can only call vma from source files in GLEEC lib
 
-    Image createImage(Allocator allocator, const VkImageCreateInfo& info)
+    Image createImage(Allocator& allocator, const VkImageCreateInfo& info)
     {
         VmaAllocationCreateInfo allocationInfo = {};
         allocationInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -21,7 +21,7 @@ namespace GLEEC::Internal::Graphics::vk
         return image;
     }
 
-    void destroyImage(Allocator allocator, const Image& image)
+    void destroyImage(Allocator& allocator, const Image& image)
     {
         vmaDestroyImage(allocator, image.image, image.allocation);
     }

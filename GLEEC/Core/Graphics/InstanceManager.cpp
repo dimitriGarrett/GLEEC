@@ -1,5 +1,9 @@
 #include "InstanceManager.h"
 
+#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
+#include "Internal/Graphics/vk/Extensions.h"
+#endif
+
 namespace GLEEC::Graphics
 {
     Instance InstanceManager::instance = {};
@@ -8,6 +12,8 @@ namespace GLEEC::Graphics
     {
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
         instance.instance = Internal::Graphics::vk::createInstance();
+
+        Internal::Graphics::vk::loadInstanceExtensions(instance.instance);
 #endif
     }
 

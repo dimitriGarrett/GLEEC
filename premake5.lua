@@ -101,4 +101,7 @@ project "Testbed"
         "{ECHO} bin/" .. outputdir .. "/%{prj.name}/%{prj.name}.exe > ../dapexe.txt",
         --"{ECHO} \"hello\"",
         "{COPYFILE} ../compile_commands/%{cfg.shortname}.json ../compile_commands.json",
+
+        "glslang ../shaders/vert.vert -V -o ../shaders/vert.spv",
+        "glslang ../shaders/frag.frag -V -o ../shaders/frag.spv",
     }

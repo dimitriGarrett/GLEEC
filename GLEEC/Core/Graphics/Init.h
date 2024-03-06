@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Graphics/ShaderManager.h"
 #include "FrameManager.h"
 #include "InstanceManager.h"
 #include "RenderTargetManager.h"
@@ -29,6 +30,7 @@ namespace GLEEC::Graphics
     {
         GPUManager::activeGPU.wait();
 
+        ShaderManager::destroy();
         FrameManager::destroy();
         RenderTargetManager::destroy();
 

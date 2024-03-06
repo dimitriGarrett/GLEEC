@@ -50,7 +50,7 @@ namespace GLEEC::Internal::Graphics::vk
         pNextChain chain = {};
 
         // its really annoying, even in debug lol
-#define ALLOW_ANNOYING_VULKAN_LOGGING 0
+#define ALLOW_ANNOYING_VULKAN_LOGGING 1
 #if ALLOW_ANNOYING_VULKAN_LOGGING
         VkDebugUtilsMessengerCreateInfoEXT messenger = DebugMessenger::instanceCreateInfo();
         chain.add(messenger);
@@ -59,7 +59,8 @@ namespace GLEEC::Internal::Graphics::vk
 #if GLEEC_DEBUG
         VkValidationFeatureEnableEXT enable[] = {
             VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
-            VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT,
+            // incompatible with shader objects
+            //VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT,
             VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
         };
 #else

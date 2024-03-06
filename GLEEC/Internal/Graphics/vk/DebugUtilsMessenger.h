@@ -1,6 +1,6 @@
 #pragma once
 
-#include "helpers/InstanceProcAddress.h"
+#include "helpers/ProcAddress.h"
 #include "DebugMessenger.h"
 
 namespace GLEEC::Internal::Graphics::vk
@@ -12,7 +12,7 @@ namespace GLEEC::Internal::Graphics::vk
         VkDebugUtilsMessengerCreateInfoEXT info = DebugMessenger::instanceCreateInfo();
 
         DebugUtilsMessenger messenger = {};
-        CHECK_CALL_INSTANCE_PROC(instance, vkCreateDebugUtilsMessengerEXT, instance, &info, nullptr, &messenger);
+        CALL_INSTANCE_PROC(instance, vkCreateDebugUtilsMessengerEXT, instance, &info, nullptr, &messenger);
 
         return messenger;
     }

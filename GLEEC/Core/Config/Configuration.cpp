@@ -1,24 +1,18 @@
 #include "Configuration.h"
+#include "Internal/Config/Directory.h"
 
-#include <filesystem>
 #include <fstream>
 
 namespace GLEEC::Config
 {
     std::unordered_map<Internal::utility::hash_t, std::string> Configuration::config = {};
 
-    inline std::string getGLEECdir()
-    {
-        std::string executable = std::filesystem::current_path().string();
-        return executable.substr(0, executable.find("GLEEC") + 5);
-    }
-
     void Configuration::init(std::string_view filepath)
     {
         if (!exists("cwd"))
         {
             // cwd is inferred from the executable location
-            config[Internal::utility::hash("cwd")] = getGLEECdir();
+            config[Internal::utility::hash("cwd")] = Internal::Config::GLEECDirectory();
         }
         
         LOG_INFO("cwd: {}", get("cwd"));
@@ -76,9 +70,10 @@ namespace GLEEC::Config
     void Configuration::init()
     {
         // cwd is inferred from the executable location
-        config[Internal::utility::hash("cwd")] = getGLEECdir();
+        config[Internal::utility::hash("cwd")] =
+            Internal::Config::GLEECDirectory();
 
         // if no config file provided, assume the default location is cwd + /config.txt (which it should be with the current filesystem layout)
-        return init(std::string(get("cwd")) + std::string("/config.txt"));
+        return init(std::string(get("cwd")) + std::string("config.txt"));
     }
 }

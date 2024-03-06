@@ -1,11 +1,13 @@
 #include "FrameManager.h"
 
+#include "ShaderManager.h"
 #include "GPUManager.h"
 #include "RenderTargetManager.h"
 
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
 #include "Internal/Graphics/vk/PipelineBarrier.h"
 #include "Internal/Graphics/vk/Image/TransitionImage.h"
+#include "Internal/Graphics/vk/DynamicShaderState.h"
 #endif
 
 #include "math/rand/rand.h"
@@ -35,53 +37,47 @@ namespace GLEEC::Graphics
         Window::Window& window = Window::WindowManager::windows[i];
 
 #if GLEEC_USE_FRAMES_IN_FLIGHT
-#define ACCESS_FRAME data
-#else
-#define ACCESS_FRAME frame.frame
-#endif
-
-#if GLEEC_USE_FRAMES_IN_FLIGHT
-        for (FrameData& data : frames[i].frames)
+        for (FrameData& frame : frames[i].frames)
         {
 #else
-        Frame& frame = frames[i];
+        FrameData& data = frames[i].frame;
 #endif
 
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-            ACCESS_FRAME.commandPool = Internal::Graphics::vk::createCommandPool(
+            frame.commandPool = Internal::Graphics::vk::createCommandPool(
                 GPUManager::activeGPU.device,
                 GPUManager::activeGPU.graphicsQueue.index);
 
-            ACCESS_FRAME.commandBuffer = Internal::Graphics::vk::allocateCommandBuffer(
+            frame.commandBuffer = Internal::Graphics::vk::allocateCommandBuffer(
                 GPUManager::activeGPU.device,
                 Internal::Graphics::vk::commandBufferAllocateInfo(
-                    ACCESS_FRAME.commandPool));
+                    frame.commandPool));
 
-            ACCESS_FRAME.swapchainSemaphore = Internal::Graphics::vk::createSemaphore(
+            frame.swapchainSemaphore = Internal::Graphics::vk::createSemaphore(
                 GPUManager::activeGPU.device);
-            ACCESS_FRAME.renderSemaphore = Internal::Graphics::vk::createSemaphore(
+            frame.renderSemaphore = Internal::Graphics::vk::createSemaphore(
                 GPUManager::activeGPU.device);
 
-            ACCESS_FRAME.submitInfo.commandBuffer =
-                Internal::Graphics::vk::commandBufferSubmitInfo(ACCESS_FRAME.commandBuffer);
+            frame.submitInfo.commandBuffer =
+                Internal::Graphics::vk::commandBufferSubmitInfo(frame.commandBuffer);
 
             // signal this after the color attachment has been written to
-            ACCESS_FRAME.submitInfo.waitSemaphore =
+            frame.submitInfo.waitSemaphore =
                 Internal::Graphics::vk::semaphoreSubmitInfo(
-                    ACCESS_FRAME.renderSemaphore, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR);
+                    frame.renderSemaphore, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR);
 
             // wait until the color attachment is ready,
             // and triggers after the fragment shader is done,
             // which is when you can draw it
-            ACCESS_FRAME.submitInfo.signalSemaphore =
+            frame.submitInfo.signalSemaphore =
                 Internal::Graphics::vk::semaphoreSubmitInfo(
-                    ACCESS_FRAME.swapchainSemaphore, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT);
+                    frame.swapchainSemaphore, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT);
 
-            ACCESS_FRAME.submitInfo.submit =
+            frame.submitInfo.submit =
                 Internal::Graphics::vk::submitInfo2(
-                    ACCESS_FRAME.submitInfo.commandBuffer,
-                    ACCESS_FRAME.submitInfo.waitSemaphore,
-                    ACCESS_FRAME.submitInfo.signalSemaphore);
+                    frame.submitInfo.commandBuffer,
+                    frame.submitInfo.waitSemaphore,
+                    frame.submitInfo.signalSemaphore);
 #endif
 
 #if GLEEC_USE_FRAMES_IN_FLIGHT
@@ -105,28 +101,74 @@ namespace GLEEC::Graphics
         recreateFlags[i] = false;
 
 #if GLEEC_USE_FRAMES_IN_FLIGHT
-        for (FrameData& data : frames[i].frames)
+        for (FrameData& frame : frames[i].frames)
         {
 #else
-        Frame& frame = frames[i];
+        FrameData& frame = frames[i];
 #endif
 
             Internal::Graphics::vk::destroyCommandPool(
-                GPUManager::activeGPU.device, ACCESS_FRAME.commandPool);
+                GPUManager::activeGPU.device, frame.commandPool);
 
             Internal::Graphics::vk::destroySemaphore(
-                GPUManager::activeGPU.device, ACCESS_FRAME.swapchainSemaphore);
+                GPUManager::activeGPU.device, frame.swapchainSemaphore);
 
             Internal::Graphics::vk::destroySemaphore(
-                GPUManager::activeGPU.device, ACCESS_FRAME.renderSemaphore);
+                GPUManager::activeGPU.device, frame.renderSemaphore);
 
-            ACCESS_FRAME.commandPool = VK_NULL_HANDLE;
-            ACCESS_FRAME.swapchainSemaphore = VK_NULL_HANDLE;
-            ACCESS_FRAME.renderSemaphore = VK_NULL_HANDLE;
+            frame.commandPool = VK_NULL_HANDLE;
+            frame.swapchainSemaphore = VK_NULL_HANDLE;
+            frame.renderSemaphore = VK_NULL_HANDLE;
 #if GLEEC_USE_FRAMES_IN_FLIGHT
         }
 #endif
 
+#endif
+    }
+
+    void FrameManager::beginRendering(size_t i)
+    {
+        Window::Window& window = Window::WindowManager::windows[i];
+
+        Frame& frame = frames[i];
+
+#if GLEEC_USE_FRAMES_IN_FLIGHT
+        FrameData& frameData = frame.frames[activeFrame];
+#else
+        FrameData& frameData = frame.frame;
+#endif
+
+#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
+        /* image transition */
+        Internal::Graphics::vk::Image& image = RenderTargetManager::renderTargets[i].image;
+
+        VkRenderingAttachmentInfo colorAttachment = {
+            VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO
+        };
+
+        colorAttachment.imageView = RenderTargetManager::renderTargets[i].imageView;
+        colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+        colorAttachment.clearValue.color = frame.clearColor;
+
+        VkRenderingInfo renderingInfo = {
+            VK_STRUCTURE_TYPE_RENDERING_INFO
+        };
+
+        renderingInfo.renderArea.extent = {
+            image.extent.width,
+            image.extent.height,
+        };
+
+        renderingInfo.layerCount = 1;
+
+        renderingInfo.colorAttachmentCount = 1;
+        renderingInfo.pColorAttachments = &colorAttachment;
+
+        vkCmdBeginRendering(frameData.commandBuffer, &renderingInfo);
 #endif
     }
 
@@ -137,18 +179,20 @@ namespace GLEEC::Graphics
         Frame& frame = frames[i];
 
 #if GLEEC_USE_FRAMES_IN_FLIGHT
-        FrameData& data = frame.frames[activeFrame];
+        FrameData& frameData = frame.frames[activeFrame];
+#else
+        FrameData& frameData = frame.frame;
 #endif
 
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
         /* swapchain update */
         /* frame.swapchainImageIndex = Internal::Graphics::vk::acquireNextImage(
             GPUManager::activeGPU.device, window.swapchain, UINT64_MAX,
-            ACCESS_FRAME.swapchainSemaphore, nullptr); */
+            frameData.swapchainSemaphore, nullptr); */
 
         VkAcquireNextImageInfoKHR imageInfo =
             Internal::Graphics::vk::acquireNextImageInfo(
-                window.swapchain, UINT64_MAX, ACCESS_FRAME.swapchainSemaphore);
+                window.swapchain, UINT64_MAX, frameData.swapchainSemaphore);
 
         VkResult result = Internal::Graphics::vk::acquireNextImage2(
             GPUManager::activeGPU.device, &imageInfo, &frame.swapchainImageIndex);
@@ -166,27 +210,32 @@ namespace GLEEC::Graphics
 
         /* command pool reset */
         Internal::Graphics::vk::resetCommandPool(
-            GPUManager::activeGPU.device, ACCESS_FRAME.commandPool);
+            GPUManager::activeGPU.device, frameData.commandPool);
         /* command pool reset */
 
         /* begin command buffer */
         Internal::Graphics::vk::beginCommandBufferOneTimeSubmit(
-            ACCESS_FRAME.commandBuffer);
+            frameData.commandBuffer);
         /* begin command buffer */
 
         /* image transition */
         Internal::Graphics::vk::Image& image = RenderTargetManager::renderTargets[i].image;
 
-        Internal::Graphics::vk::transitionColorImageUndefinedToGeneral(
-            ACCESS_FRAME.commandBuffer, image);
+        Internal::Graphics::vk::transitionColorImageUndefinedToColorAttachment(
+            frameData.commandBuffer, image);
         /* image transition */
 
         /* clear image */
-        static const VkImageSubresourceRange clearRange = 
+        /* static const VkImageSubresourceRange clearRange = 
             { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-        vkCmdClearColorImage(ACCESS_FRAME.commandBuffer, image, VK_IMAGE_LAYOUT_GENERAL,
-            &frame.clearColor, 1, &clearRange);
+        vkCmdClearColorImage(frameData.commandBuffer, image, VK_IMAGE_LAYOUT_GENERAL,
+            &frame.clearColor, 1, &clearRange); */
         /* clear image */
+
+        beginRendering(i);
+
+        ShaderManager::bind(frameData, i);
+        ShaderManager::setState(frameData, i);
 #endif
     }
 
@@ -197,21 +246,25 @@ namespace GLEEC::Graphics
         Frame& frame = frames[i];
 
 #if GLEEC_USE_FRAMES_IN_FLIGHT
-        FrameData& data = frame.frames[activeFrame];
+        FrameData& frameData = frame.frames[activeFrame];
+#else
+        FrameData& framedata = frame.frame;
 #endif
+
+        vkCmdEndRendering(frameData.commandBuffer);
 
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
         /* image transition */
         Internal::Graphics::vk::Image& drawImage =
             RenderTargetManager::renderTargets[i].image;
 
-        Internal::Graphics::vk::transitionColorImageGeneralToTransferSrc(
-            ACCESS_FRAME.commandBuffer, drawImage);
+        Internal::Graphics::vk::transitionColorImageColorAttachmentToTransferSrc(
+            frameData.commandBuffer, drawImage);
 
         VkImage& image = window.swapchain.images[frame.swapchainImageIndex];
 
         Internal::Graphics::vk::transitionColorImageUndefinedToTransferDst(
-            ACCESS_FRAME.commandBuffer, image);
+            frameData.commandBuffer, image);
 
         VkExtent3D extent = { 0, 0, 1 };
         extent.width = static_cast<uint32_t>(window.size().x);
@@ -224,14 +277,14 @@ namespace GLEEC::Graphics
                     window.swapchain.extent),
                 drawImage, image);
 
-        Internal::Graphics::vk::blitImage(ACCESS_FRAME.commandBuffer, blitInfo);
+        Internal::Graphics::vk::blitImage(frameData.commandBuffer, blitInfo);
 
         Internal::Graphics::vk::transitionColorImageTransferDstToPresentSrc(
-            ACCESS_FRAME.commandBuffer, image);
+            frameData.commandBuffer, image);
         /* image transition */
 
         /* end command buffer */
-        Internal::Graphics::vk::endCommandBuffer(ACCESS_FRAME.commandBuffer);
+        Internal::Graphics::vk::endCommandBuffer(frameData.commandBuffer);
         /* end command buffer */
 #endif
     }

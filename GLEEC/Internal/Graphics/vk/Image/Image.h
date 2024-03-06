@@ -106,9 +106,9 @@ namespace GLEEC::Internal::Graphics::vk
             VK_IMAGE_TYPE_3D, format, extent, mipLevels, arrayLayers);
     }
 
-    GLEEC_API_EXTERN Image createImage(Allocator allocator, const VkImageCreateInfo& info);
+    GLEEC_API_EXTERN Image createImage(Allocator& allocator, const VkImageCreateInfo& info);
 
-    GLEEC_API_EXTERN void destroyImage(Allocator allocator, const Image& image);
+    GLEEC_API_EXTERN void destroyImage(Allocator& allocator, const Image& image);
 
     inline void destroyImage(VkDevice device, VkImage image)
     {
