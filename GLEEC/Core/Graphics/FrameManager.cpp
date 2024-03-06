@@ -126,6 +126,71 @@ namespace GLEEC::Graphics
 #endif
     }
 
+    void FrameManager::swap(size_t a, size_t b)
+    {
+        Frame& fa = frames[a];
+        Frame& fb = frames[b];
+
+        std::swap(fa.swapchainImageIndex, fb.swapchainImageIndex);
+        std::swap(fa.clearColor, fb.clearColor);
+
+#if GLEEC_USE_FRAMES_IN_FLIGHT
+        for (size_t i = 0; i < Frame::FRAMES_IN_FLIGHT; ++i)
+        {
+            FrameData& ffa = fa.frames[i];
+            FrameData& ffb = fb.frames[i];
+
+            std::swap(ffa.commandPool, ffb.commandPool);
+            std::swap(ffa.commandBuffer, ffb.commandBuffer);
+            std::swap(ffa.swapchainSemaphore, ffb.swapchainSemaphore);
+            std::swap(ffa.renderSemaphore, ffb.renderSemaphore);
+
+            ffa.submitInfo.commandBuffer.commandBuffer = ffa.commandBuffer;
+            ffa.submitInfo.waitSemaphore.semaphore = ffa.swapchainSemaphore;
+            ffa.submitInfo.signalSemaphore.semaphore = ffa.renderSemaphore;
+            ffa.submitInfo.submit.pWaitSemaphoreInfos = &ffa.submitInfo.waitSemaphore;
+            ffa.submitInfo.submit.pSignalSemaphoreInfos = &ffa.submitInfo.signalSemaphore;
+            ffa.submitInfo.submit.pCommandBufferInfos = &ffa.submitInfo.commandBuffer;
+
+            ffb.submitInfo.commandBuffer.commandBuffer = ffb.commandBuffer;
+            ffb.submitInfo.waitSemaphore.semaphore = ffb.swapchainSemaphore;
+            ffb.submitInfo.signalSemaphore.semaphore = ffb.renderSemaphore;
+            ffb.submitInfo.submit.pWaitSemaphoreInfos = &ffb.submitInfo.waitSemaphore;
+            ffb.submitInfo.submit.pSignalSemaphoreInfos = &ffb.submitInfo.signalSemaphore;
+            ffb.submitInfo.submit.pCommandBufferInfos = &ffb.submitInfo.commandBuffer;
+
+
+            /* std::swap(ffa.submitInfo.commandBuffer, ffb.submitInfo.commandBuffer);
+            std::swap(ffa.submitInfo.waitSemaphore, ffb.submitInfo.waitSemaphore);
+            std::swap(ffa.submitInfo.signalSemaphore, ffb.submitInfo.signalSemaphore);
+            std::swap(ffa.submitInfo.submit, ffb.submitInfo.submit); */
+        }
+#else
+        std::swap(fa.frame.commandPool, fb.frame.commandPool);
+        std::swap(fa.frame.commandBuffer, fb.frame.commandBuffer);
+        std::swap(fa.frame.swapchainSemaphore, fb.frame.swapchainSemaphore);
+        std::swap(fa.frame.renderSemaphore, fb.frame.renderSemaphore);
+
+            fa.submitInfo.commandBuffer.commandBuffer = fa.commandBuffer;
+            fa.submitInfo.waitSemaphore.semaphore = fa.swapchainSemaphore;
+            fa.submitInfo.signalSemaphore.semaphore = fa.renderSemaphore;
+            fa.submitInfo.submit.pWaitSemaphoreInfos = &fa.submitInfo.waitSemaphore;
+            fa.submitInfo.submit.pSignalSemaphoreInfos = &fa.submitInfo.signalSemaphore;
+            fa.submitInfo.submit.pCommandBufferInfos = &fa.submitInfo.commandBuffer;
+
+            fb.submitInfo.commandBuffer.commandBuffer = fb.commandBuffer;
+            fb.submitInfo.waitSemaphore.semaphore = fb.swapchainSemaphore;
+            fb.submitInfo.signalSemaphore.semaphore = fb.renderSemaphore;
+            fb.submitInfo.submit.pWaitSemaphoreInfos = &fb.submitInfo.waitSemaphore;
+            fb.submitInfo.submit.pSignalSemaphoreInfos = &fb.submitInfo.signalSemaphore;
+            fb.submitInfo.submit.pCommandBufferInfos = &fb.submitInfo.commandBuffer;
+#endif
+
+        bool bb = recreateFlags[b];
+        recreateFlags[b] = recreateFlags[a];
+        recreateFlags[a] = bb;
+    }
+
     void FrameManager::beginRendering(size_t i)
     {
         Window::Window& window = Window::WindowManager::windows[i];
@@ -465,6 +530,7 @@ namespace GLEEC::Graphics
             GPUManager::activeGPU.device, swapchain);
 
         VkSwapchainCreateInfoKHR swapchainInfo = swapchain.createInfo;
+        swapchainInfo.surface = Window::WindowManager::windows[i].surface;
 
         VkSwapchainKHR oldSwapchain = swapchain;
 

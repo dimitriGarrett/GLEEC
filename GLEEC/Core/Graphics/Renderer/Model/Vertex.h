@@ -14,6 +14,7 @@ namespace GLEEC::Graphics::Renderer
 {
     struct Vertex
     {
+        // TODO: reorder as pos, uv.x, norm, uv.y?
         math::vec3 pos  = {};
         math::vec2 uv   = {};
         math::vec3 norm = {};

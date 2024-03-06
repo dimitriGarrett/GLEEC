@@ -65,8 +65,8 @@ namespace GLEEC::Graphics
         GLEEC_API static void destroyFrame(size_t i);
         GLEEC_API static void initFrame(size_t i);
 
-        static void swap(size_t a, size_t b)
-        {
+        GLEEC_API static void swap(size_t a, size_t b);
+        /* {
             Frame&& fa = std::move(frames[a]);
             frames[a] = std::move(frames[b]);
             frames[b] = std::move(fa);
@@ -74,14 +74,13 @@ namespace GLEEC::Graphics
             bool bb = recreateFlags[b];
             recreateFlags[b] = recreateFlags[a];
             recreateFlags[a] = bb;
-        }
+        } */
 
         static void recreateFrame(size_t i)
         {
             recreateFlags[i] = true;
         }
 
-        // temp TODO: move back to under lastFrame
         GLEEC_API static uint32_t activeFrame;
     private:
         GLEEC_API static void beginFrame(size_t i);
