@@ -12,6 +12,8 @@ namespace GLEEC::Graphics
 {
     // mainly for HDR and post processing (blah blah blah)
     // for vulkan cause idk if dx12 needs this but vk does
+
+    // HUGE TODO: depth buffering
     struct RenderTarget
     {
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK

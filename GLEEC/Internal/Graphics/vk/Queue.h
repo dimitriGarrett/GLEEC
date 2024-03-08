@@ -160,4 +160,9 @@ namespace GLEEC::Internal::Graphics::vk
     {
         CHECK_VK(vkQueuePresentKHR(queue, &presentInfo));
     }
+
+    inline void queueWaitIdle(VkQueue queue)
+    {
+        CHECK_VK(vkQueueWaitIdle(queue));
+    }
 }

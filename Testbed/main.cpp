@@ -1,3 +1,4 @@
+#include "Core/Graphics/BufferManager.h"
 #include "Core/Graphics/ShaderManager.h"
 #include "Init/Init.h"
 
@@ -7,6 +8,7 @@
 
 #include "Core/Graphics/Frame.h"
 
+#include "Internal/Graphics/vk/Buffer.h"
 #include "Internal/Graphics/vk/Extensions.h"
 #include "Internal/Graphics/vk/Shader.h"
 #include "Internal/Time/Time.h"
@@ -59,6 +61,36 @@ int main()
         }
     });
 
+    LOG_MESSAGE("NEED DEPTH BUFFERING SOON");
+    LOG_MESSAGE("NEED MULTISAMPLING SOON");
+    LOG_MESSAGE("NEED MIPMAPPING SOON");
+
+    std::vector<float> verts = {
+        0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+        0.5f, 0.5f,  0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+        -0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+        /* -0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+        -0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+        0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, */
+    };
+
+    auto buffer = Graphics::BufferManager::createVertexBuffer(verts);
+
+    /* auto buffer = Internal::Graphics::vk::createBuffer(
+        Graphics::GPUManager::activeGPU.allocator,
+        Internal::Graphics::vk::createBuffer(9 * sizeof(float),
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT),
+        VMA_MEMORY_USAGE_GPU_ONLY);
+
+    auto buffer2 = Internal::Graphics::vk::createBuffer(
+        Graphics::GPUManager::activeGPU.allocator,
+        Internal::Graphics::vk::createBuffer(9 * sizeof(float),
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT),
+        VMA_MEMORY_USAGE_CPU_TO_GPU); */
+
+    /* memcpy_s(buffer2.map, verts.size() * sizeof(float),
+        verts.data(), verts.size() * sizeof(float)); */
+
     while (Window::WindowManager::anyOpen())
     {
         this_frame = glfwGetTime();
@@ -67,6 +99,8 @@ int main()
 
         Graphics::FrameData& frame = Graphics::FrameManager::frames[0].frames[
             Graphics::FrameManager::activeFrame];
+
+        Graphics::BufferManager::bindVertexBuffer(frame.commandBuffer, buffer);
 
         vkCmdDraw(frame.commandBuffer, 3, 1, 0, 0);
 
@@ -80,6 +114,8 @@ int main()
 
         Input::update();
     }
+
+    Graphics::BufferManager::destroyBuffer(buffer);
 
     GLEEC::terminate();
 }

@@ -1,5 +1,5 @@
 #include "ShaderManager.h"
-#include "Core/Graphics/Renderer/Model/Vertex.h"
+#include "Core/Graphics/Renderer/Model/VertexManager.h"
 #include "Core/Window/WindowManager.h"
 #include "GPUManager.h"
 
@@ -221,8 +221,8 @@ namespace GLEEC::Graphics
             VK_FALSE);
 
         Internal::Graphics::vk::cmdSetVertexInput(commandBuffer,
-            Renderer::Vertex::bindingDescription(),
-            Renderer::Vertex::attributeDescription());
+            VertexManager::bindingDescription(),
+            VertexManager::attributeDescription());
 #endif
     }
 }

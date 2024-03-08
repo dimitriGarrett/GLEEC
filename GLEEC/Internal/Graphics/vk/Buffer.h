@@ -10,6 +10,8 @@ namespace GLEEC::Internal::Graphics::vk
         VkBuffer buffer = {};
         VkBufferUsageFlags usage = {};
 
+        VkDeviceSize size = {};
+
         char* map = nullptr;
         Allocation allocation = {};
 

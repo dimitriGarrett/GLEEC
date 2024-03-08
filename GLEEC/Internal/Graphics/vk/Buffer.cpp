@@ -12,6 +12,7 @@ namespace GLEEC::Internal::Graphics::vk
         CHECK_VK(vmaCreateBuffer(allocator, &createInfo, &info, &buffer.buffer, &buffer.allocation, nullptr));
 
         buffer.usage = createInfo.usage;
+        buffer.size = createInfo.size;
 
         return buffer;
     }

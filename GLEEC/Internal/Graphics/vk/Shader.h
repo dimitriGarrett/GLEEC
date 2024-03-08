@@ -23,6 +23,9 @@ namespace GLEEC::Internal::Graphics::vk
         size_t size = 0;
 
         std::vector<char> code = {};
+
+        bool operator==(const ShaderCache&) const = default;
+        bool operator!=(const ShaderCache&) const = default;
     };
 
     struct CreateShaderInfo
@@ -40,6 +43,8 @@ namespace GLEEC::Internal::Graphics::vk
 
         std::string name = "";
         std::string filepath = "";
+
+        bool loadedFromCache = false;
 
         operator VkShaderEXT() const
         {
@@ -157,6 +162,8 @@ namespace GLEEC::Internal::Graphics::vk
 
             getCachedShaderName(filepath),
             std::string(filepath),
+
+            false,
         };
     }
 
@@ -172,6 +179,8 @@ namespace GLEEC::Internal::Graphics::vk
             static_cast<uint32_t>(pushConstants.size()), pushConstants.data(),
             specializationInfo);
     }
+
+    GLEEC_API bool verifyCache(VkDevice device, const Shader& shader);
 
     inline Shader loadCachedShader(std::string_view filepath,
         VkShaderStageFlagBits stage, VkShaderStageFlags nextStage,
@@ -251,6 +260,8 @@ namespace GLEEC::Internal::Graphics::vk
 
             name,
             std::string(filepath),
+
+            true,
         };
     }
 
@@ -272,6 +283,19 @@ namespace GLEEC::Internal::Graphics::vk
             setLayouts, pushConstants, specializationInfo);
     }
 
+    inline ShaderCache getShaderBinary(VkDevice device, VkShaderEXT shader)
+    {
+        ShaderCache cache = {};
+
+        vkGetShaderBinaryDataEXT(device, shader, &cache.size, nullptr);
+
+        cache.code.resize(cache.size);
+
+        vkGetShaderBinaryDataEXT(device, shader, &cache.size, cache.code.data());
+
+        return cache;
+    }
+
     inline void writeCachedShader(VkDevice device,
         std::string_view name, VkShaderEXT shader)
     {
@@ -280,13 +304,7 @@ namespace GLEEC::Internal::Graphics::vk
         std::ofstream file(cachedShaderFilepath(name),
             std::ios::out | std::ios::binary);
 
-        ShaderCache cache = {};
-
-        vkGetShaderBinaryDataEXT(device, shader, &cache.size, nullptr);
-
-        cache.code.resize(cache.size);
-
-        vkGetShaderBinaryDataEXT(device, shader, &cache.size, cache.code.data());
+        ShaderCache cache = getShaderBinary(device, shader);
 
         header.size = cache.size;
 

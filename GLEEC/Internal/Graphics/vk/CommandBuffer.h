@@ -87,4 +87,21 @@ namespace GLEEC::Internal::Graphics::vk
 
         return info;
     }
+
+    inline void freeCommandBuffers(VkDevice device, VkCommandPool commandPool,
+        uint32_t count, const VkCommandBuffer* commandBuffers)
+    {
+        vkFreeCommandBuffers(device, commandPool, count, commandBuffers);
+    }
+
+    inline void freeCommandBuffer(VkDevice device, VkCommandPool commandPool,
+        const VkCommandBuffer* commandBuffer)
+    {
+        vkFreeCommandBuffers(device, commandPool, 1, commandBuffer);
+    }
 }
+    inline void freeCommandBuffer(VkDevice device, VkCommandPool commandPool,
+        const VkCommandBuffer& commandBuffer)
+    {
+        vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+    }

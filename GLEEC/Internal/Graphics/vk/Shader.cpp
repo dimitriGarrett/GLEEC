@@ -7,12 +7,49 @@ namespace GLEEC::Internal::Graphics::vk
         std::vector<VkShaderCreateInfoEXT> infos(shaders.size());
         std::vector<VkShaderEXT> vkShaders(shaders.size());
 
+        // if the shader cache and the shader spv differ, load spv
+        // BUT: vulkan requires that all linked shaders are created in the same way
+        // so that means if one differs, have to disregard ALL caches
+        // this is so annoying :(
+
+        // this is mainly for debugging and writing shaders,
+        // in release and prod code they should always be the same
+#if GLEEC_DEBUG
+        for (Shader& shader : shaders)
+        {
+            if (shader.loadedFromCache && !verifyCache(device, shader))
+            {
+
+                LOG_MESSAGE("Shader cache: {} differs from shader file: {}, disregarding caching, loading all files from spv!",
+                    cachedShaderFilepath(shader.name), shader.filepath);
+
+                for (Shader& toReload : shaders)
+                {
+                    toReload = readShader(
+                        toReload.filepath,
+                        toReload.createInfo.stage,
+                        toReload.createInfo.nextStage,
+                        toReload.createInfo.flags,
+                        toReload.createInfo.setLayoutCount,
+                        toReload.createInfo.pSetLayouts,
+                        toReload.createInfo.pushConstantRangeCount,
+                        toReload.createInfo.pPushConstantRanges,
+                        toReload.createInfo.pSpecializationInfo);
+                }
+
+                break;
+            }
+        }
+#endif
+
         for (size_t i = 0; i < shaders.size(); ++i)
         {
-            infos[i] = shaders[i].createInfo;
-            infos[i].pCode = shaders[i].code.code.data();
+            Shader& shader = shaders[i];
 
-            vkShaders[i] = shaders[i];
+            infos[i] = shader.createInfo;
+            infos[i].pCode = shader.code.code.data();
+
+            vkShaders[i] = shader;
         }
 
         VkResult res = vkCreateShadersEXT(device,
@@ -71,6 +108,26 @@ namespace GLEEC::Internal::Graphics::vk
 
     void createShader(VkDevice device, Shader& shader)
     {
+#if GLEEC_DEBUG
+        // shader cache and file differ, load the file instead
+        if (shader.loadedFromCache && !verifyCache(device, shader))
+        {
+            shader = readShader(
+                shader.filepath,
+                shader.createInfo.stage,
+                shader.createInfo.nextStage,
+                shader.createInfo.flags,
+                shader.createInfo.setLayoutCount,
+                shader.createInfo.pSetLayouts,
+                shader.createInfo.pushConstantRangeCount,
+                shader.createInfo.pPushConstantRanges,
+                shader.createInfo.pSpecializationInfo);
+
+            LOG_MESSAGE("Shader cache: {} differs from shader file: {}, loading file instead!",
+                cachedShaderFilepath(shader.name), shader.filepath);
+        }
+#endif
+
         shader.createInfo.pCode = shader.code.code.data();
         VkResult res = vkCreateShadersEXT(device, 1, &shader.createInfo,
             nullptr, &shader.shader);
@@ -109,5 +166,29 @@ namespace GLEEC::Internal::Graphics::vk
 
             LOG_MESSAGE("Reloaded shaders from failed cached files!");
         }
+    }
+
+    bool verifyCache(VkDevice device, const Shader& shader)
+    {
+        // cant link a shader of only one stage
+        constexpr uint32_t removeLink = ~(VK_SHADER_CREATE_LINK_STAGE_BIT_EXT);
+
+        Shader noncached = readShader(shader.filepath,
+            shader.createInfo.stage,
+            shader.createInfo.nextStage,
+            shader.createInfo.flags & removeLink,
+            shader.createInfo.setLayoutCount,
+            shader.createInfo.pSetLayouts,
+            shader.createInfo.pushConstantRangeCount,
+            shader.createInfo.pPushConstantRanges,
+            shader.createInfo.pSpecializationInfo);
+
+        createShader(device, noncached);
+
+        bool val = getShaderBinary(device, noncached) == shader.code;
+
+        destroyShader(device, noncached.shader);
+
+        return val;
     }
 }
