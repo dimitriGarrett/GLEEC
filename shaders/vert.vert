@@ -10,5 +10,5 @@ void main()
 {
     gl_Position = vec4(position, 1.0);
 
-    col = vec4(normal.x, normal.y, 1.0, 1.0);
+    col = vec4(normal, 1.0);
 }

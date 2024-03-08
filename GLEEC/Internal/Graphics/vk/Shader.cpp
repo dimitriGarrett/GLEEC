@@ -19,7 +19,6 @@ namespace GLEEC::Internal::Graphics::vk
         {
             if (shader.loadedFromCache && !verifyCache(device, shader))
             {
-
                 LOG_MESSAGE("Shader cache: {} differs from shader file: {}, disregarding caching, loading all files from spv!",
                     cachedShaderFilepath(shader.name), shader.filepath);
 
