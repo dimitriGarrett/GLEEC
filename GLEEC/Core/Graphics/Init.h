@@ -1,10 +1,13 @@
 #pragma once
 
-#include "Core/Graphics/BufferManager.h"
-#include "Core/Graphics/ShaderManager.h"
+#include "BufferManager.h"
+#include "ShaderManager.h"
+
 #include "FrameManager.h"
 #include "InstanceManager.h"
 #include "RenderTargetManager.h"
+
+#include "Renderer/Init.h"
 
 namespace GLEEC::Graphics
 {
@@ -27,9 +30,12 @@ namespace GLEEC::Graphics
         RenderTargetManager::init();
 
         BufferManager::init();
+        ShaderManager::init();
+
+        initRenderer();
     }
 
-    inline void terminate()
+    inline void destroy()
     {
         GPUManager::activeGPU.wait();
 
@@ -38,6 +44,8 @@ namespace GLEEC::Graphics
         RenderTargetManager::destroy();
 
         BufferManager::destroy();
+
+        destroyRenderer();
 
         GPUManager::closeGPU();
         InstanceManager::destroyInstance();

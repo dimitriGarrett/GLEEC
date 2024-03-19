@@ -43,19 +43,19 @@ private:
 	std::unique_ptr<ObjectPoolGroup> pool_group;
 
 public:
-	ParsedIR();
+	SPIRV_EXPORT_API ParsedIR();
 
 	// Due to custom allocations from object pools, we cannot use a default copy constructor.
-	ParsedIR(const ParsedIR &other);
-	ParsedIR &operator=(const ParsedIR &other);
+	SPIRV_EXPORT_API ParsedIR(const ParsedIR &other);
+	SPIRV_EXPORT_API ParsedIR &operator=(const ParsedIR &other);
 
 	// Moves are unproblematic, but we need to implement it anyways, since MSVC 2013 does not understand
 	// how to default-implement these.
-	ParsedIR(ParsedIR &&other) SPIRV_CROSS_NOEXCEPT;
-	ParsedIR &operator=(ParsedIR &&other) SPIRV_CROSS_NOEXCEPT;
+	SPIRV_EXPORT_API ParsedIR(ParsedIR &&other) SPIRV_CROSS_NOEXCEPT;
+	SPIRV_EXPORT_API ParsedIR &operator=(ParsedIR &&other) SPIRV_CROSS_NOEXCEPT;
 
 	// Resizes ids, meta and block_meta.
-	void set_id_bounds(uint32_t bounds);
+	SPIRV_EXPORT_API void set_id_bounds(uint32_t bounds);
 
 	// The raw SPIR-V, instructions and opcodes refer to this by offset + count.
 	std::vector<uint32_t> spirv;
@@ -128,35 +128,35 @@ public:
 	// Can be useful for simple "raw" reflection.
 	// However, most members are here because the Parser needs most of these,
 	// and might as well just have the whole suite of decoration/name handling in one place.
-	void set_name(ID id, const std::string &name);
-	const std::string &get_name(ID id) const;
-	void set_decoration(ID id, spv::Decoration decoration, uint32_t argument = 0);
-	void set_decoration_string(ID id, spv::Decoration decoration, const std::string &argument);
-	bool has_decoration(ID id, spv::Decoration decoration) const;
-	uint32_t get_decoration(ID id, spv::Decoration decoration) const;
-	const std::string &get_decoration_string(ID id, spv::Decoration decoration) const;
-	const Bitset &get_decoration_bitset(ID id) const;
-	void unset_decoration(ID id, spv::Decoration decoration);
+	SPIRV_EXPORT_API void set_name(ID id, const std::string &name);
+	SPIRV_EXPORT_API const std::string &get_name(ID id) const;
+	SPIRV_EXPORT_API void set_decoration(ID id, spv::Decoration decoration, uint32_t argument = 0);
+	SPIRV_EXPORT_API void set_decoration_string(ID id, spv::Decoration decoration, const std::string &argument);
+	SPIRV_EXPORT_API bool has_decoration(ID id, spv::Decoration decoration) const;
+	SPIRV_EXPORT_API uint32_t get_decoration(ID id, spv::Decoration decoration) const;
+	SPIRV_EXPORT_API const std::string &get_decoration_string(ID id, spv::Decoration decoration) const;
+	SPIRV_EXPORT_API const Bitset &get_decoration_bitset(ID id) const;
+	SPIRV_EXPORT_API void unset_decoration(ID id, spv::Decoration decoration);
 
 	// Decoration handling methods (for members of a struct).
-	void set_member_name(TypeID id, uint32_t index, const std::string &name);
-	const std::string &get_member_name(TypeID id, uint32_t index) const;
-	void set_member_decoration(TypeID id, uint32_t index, spv::Decoration decoration, uint32_t argument = 0);
-	void set_member_decoration_string(TypeID id, uint32_t index, spv::Decoration decoration,
+	SPIRV_EXPORT_API void set_member_name(TypeID id, uint32_t index, const std::string &name);
+	SPIRV_EXPORT_API const std::string &get_member_name(TypeID id, uint32_t index) const;
+	SPIRV_EXPORT_API void set_member_decoration(TypeID id, uint32_t index, spv::Decoration decoration, uint32_t argument = 0);
+	SPIRV_EXPORT_API void set_member_decoration_string(TypeID id, uint32_t index, spv::Decoration decoration,
 	                                  const std::string &argument);
-	uint32_t get_member_decoration(TypeID id, uint32_t index, spv::Decoration decoration) const;
-	const std::string &get_member_decoration_string(TypeID id, uint32_t index, spv::Decoration decoration) const;
-	bool has_member_decoration(TypeID id, uint32_t index, spv::Decoration decoration) const;
-	const Bitset &get_member_decoration_bitset(TypeID id, uint32_t index) const;
-	void unset_member_decoration(TypeID id, uint32_t index, spv::Decoration decoration);
+	SPIRV_EXPORT_API uint32_t get_member_decoration(TypeID id, uint32_t index, spv::Decoration decoration) const;
+	SPIRV_EXPORT_API const std::string &get_member_decoration_string(TypeID id, uint32_t index, spv::Decoration decoration) const;
+	SPIRV_EXPORT_API bool has_member_decoration(TypeID id, uint32_t index, spv::Decoration decoration) const;
+	SPIRV_EXPORT_API const Bitset &get_member_decoration_bitset(TypeID id, uint32_t index) const;
+	SPIRV_EXPORT_API void unset_member_decoration(TypeID id, uint32_t index, spv::Decoration decoration);
 
-	void mark_used_as_array_length(ID id);
-	uint32_t increase_bound_by(uint32_t count);
-	Bitset get_buffer_block_flags(const SPIRVariable &var) const;
-	Bitset get_buffer_block_type_flags(const SPIRType &type) const;
+	SPIRV_EXPORT_API void mark_used_as_array_length(ID id);
+	SPIRV_EXPORT_API uint32_t increase_bound_by(uint32_t count);
+	SPIRV_EXPORT_API Bitset get_buffer_block_flags(const SPIRVariable &var) const;
+	SPIRV_EXPORT_API Bitset get_buffer_block_type_flags(const SPIRType &type) const;
 
-	void add_typed_id(Types type, ID id);
-	void remove_typed_id(Types type, ID id);
+	SPIRV_EXPORT_API void add_typed_id(Types type, ID id);
+	SPIRV_EXPORT_API void remove_typed_id(Types type, ID id);
 
 	class LoopLock
 	{
@@ -180,8 +180,8 @@ public:
 	// If we have a soft lock, we silently ignore any additions to the typed arrays.
 	// This should only be used for physical ID remapping where we need to create an ID, but we will never
 	// care about iterating over them.
-	LoopLock create_loop_hard_lock() const;
-	LoopLock create_loop_soft_lock() const;
+	SPIRV_EXPORT_API LoopLock create_loop_hard_lock() const;
+	SPIRV_EXPORT_API LoopLock create_loop_soft_lock() const;
 
 	template <typename T, typename Op>
 	void for_each_typed_id(const Op &op)
@@ -211,23 +211,23 @@ public:
 		reset_all_of_type(static_cast<Types>(T::type));
 	}
 
-	void reset_all_of_type(Types type);
+	SPIRV_EXPORT_API void reset_all_of_type(Types type);
 
-	Meta *find_meta(ID id);
-	const Meta *find_meta(ID id) const;
+	SPIRV_EXPORT_API Meta *find_meta(ID id);
+	SPIRV_EXPORT_API const Meta *find_meta(ID id) const;
 
 	const std::string &get_empty_string() const
 	{
 		return empty_string;
 	}
 
-	void make_constant_null(uint32_t id, uint32_t type, bool add_to_typed_id_set);
+	SPIRV_EXPORT_API void make_constant_null(uint32_t id, uint32_t type, bool add_to_typed_id_set);
 
-	void fixup_reserved_names();
+	SPIRV_EXPORT_API void fixup_reserved_names();
 
-	static void sanitize_underscores(std::string &str);
-	static void sanitize_identifier(std::string &str, bool member, bool allow_reserved_prefixes);
-	static bool is_globally_reserved_identifier(std::string &str, bool allow_reserved_prefixes);
+	SPIRV_EXPORT_API static void sanitize_underscores(std::string &str);
+	SPIRV_EXPORT_API static void sanitize_identifier(std::string &str, bool member, bool allow_reserved_prefixes);
+	SPIRV_EXPORT_API static bool is_globally_reserved_identifier(std::string &str, bool allow_reserved_prefixes);
 
 	uint32_t get_spirv_version() const;
 

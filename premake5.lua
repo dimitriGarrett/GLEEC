@@ -102,6 +102,8 @@ project "Testbed"
         --"{ECHO} \"hello\"",
         "{COPYFILE} ../compile_commands/%{cfg.shortname}.json ../compile_commands.json",
 
-        "glslang ../shaders/vert.vert -V -o ../shaders/vert.spv",
-        "glslang ../shaders/frag.frag -V -o ../shaders/frag.spv",
+        "glslang ../shaders/clvert.vert -V -o ../shaders/clvert.spv",
+        "glslang ../shaders/uvvert.vert -V -o ../shaders/uvvert.spv",
+        "glslang ../shaders/clfrag.frag -V -o ../shaders/clfrag.spv",
+        "glslang ../shaders/uvfrag.frag -V -o ../shaders/uvfrag.spv",
     }

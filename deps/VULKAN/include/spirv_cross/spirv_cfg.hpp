@@ -27,13 +27,15 @@
 #include "spirv_common.hpp"
 #include <assert.h>
 
+#include "spirv_export.h"
+
 namespace SPIRV_CROSS_NAMESPACE
 {
 class Compiler;
 class CFG
 {
 public:
-	CFG(Compiler &compiler, const SPIRFunction &function);
+	SPIRV_EXPORT_API CFG(Compiler &compiler, const SPIRFunction &function);
 
 	Compiler &get_compiler()
 	{
@@ -107,9 +109,9 @@ public:
 		}
 	}
 
-	uint32_t find_loop_dominator(uint32_t block) const;
+	SPIRV_EXPORT_API uint32_t find_loop_dominator(uint32_t block) const;
 
-	bool node_terminates_control_flow_in_sub_graph(BlockID from, BlockID to) const;
+	SPIRV_EXPORT_API bool node_terminates_control_flow_in_sub_graph(BlockID from, BlockID to) const;
 
 private:
 	struct VisitOrder
@@ -136,28 +138,28 @@ private:
 	SmallVector<uint32_t> post_order;
 	SmallVector<uint32_t> empty_vector;
 
-	void add_branch(uint32_t from, uint32_t to);
-	void build_post_order_visit_order();
-	void build_immediate_dominators();
-	bool post_order_visit(uint32_t block);
+	SPIRV_EXPORT_API void add_branch(uint32_t from, uint32_t to);
+	SPIRV_EXPORT_API void build_post_order_visit_order();
+	SPIRV_EXPORT_API void build_immediate_dominators();
+	SPIRV_EXPORT_API bool post_order_visit(uint32_t block);
 	uint32_t visit_count = 0;
 
-	bool is_back_edge(uint32_t to) const;
-	bool has_visited_forward_edge(uint32_t to) const;
+	SPIRV_EXPORT_API bool is_back_edge(uint32_t to) const;
+	SPIRV_EXPORT_API bool has_visited_forward_edge(uint32_t to) const;
 };
 
 class DominatorBuilder
 {
 public:
-	DominatorBuilder(const CFG &cfg);
+	SPIRV_EXPORT_API DominatorBuilder(const CFG &cfg);
 
-	void add_block(uint32_t block);
+	SPIRV_EXPORT_API void add_block(uint32_t block);
 	uint32_t get_dominator() const
 	{
 		return dominator;
 	}
 
-	void lift_continue_block_dominator();
+	SPIRV_EXPORT_API void lift_continue_block_dominator();
 
 private:
 	const CFG &cfg;

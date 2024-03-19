@@ -12,9 +12,8 @@ namespace GLEEC::Window
         WindowManager::init();
     }
 
-    inline void terminate()
+    inline void destroy()
     {
-        // nothing here (used to be)
         WindowManager::destroy();
     }
 }

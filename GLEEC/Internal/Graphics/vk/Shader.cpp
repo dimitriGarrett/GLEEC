@@ -1,193 +1,173 @@
 #include "Shader.h"
 
+#include <fstream>
+
 namespace GLEEC::Internal::Graphics::vk
 {
-    void createShaders(VkDevice device, std::vector<Shader>& shaders)
+    inline VkShaderStageFlagBits stage(std::string_view filepath)
     {
-        std::vector<VkShaderCreateInfoEXT> infos(shaders.size());
-        std::vector<VkShaderEXT> vkShaders(shaders.size());
-
-        // if the shader cache and the shader spv differ, load spv
-        // BUT: vulkan requires that all linked shaders are created in the same way
-        // so that means if one differs, have to disregard ALL caches
-        // this is so annoying :(
-
-        // this is mainly for debugging and writing shaders,
-        // in release and prod code they should always be the same
-#if GLEEC_DEBUG
-        for (Shader& shader : shaders)
+        if (filepath.find("vert") != filepath.npos)
         {
-            if (shader.loadedFromCache && !verifyCache(device, shader))
-            {
-                LOG_MESSAGE("Shader cache: {} differs from shader file: {}, disregarding caching, loading all files from spv!",
-                    cachedShaderFilepath(shader.name), shader.filepath);
-
-                for (Shader& toReload : shaders)
-                {
-                    toReload = readShader(
-                        toReload.filepath,
-                        toReload.createInfo.stage,
-                        toReload.createInfo.nextStage,
-                        toReload.createInfo.flags,
-                        toReload.createInfo.setLayoutCount,
-                        toReload.createInfo.pSetLayouts,
-                        toReload.createInfo.pushConstantRangeCount,
-                        toReload.createInfo.pPushConstantRanges,
-                        toReload.createInfo.pSpecializationInfo);
-                }
-
-                break;
-            }
+            return VK_SHADER_STAGE_VERTEX_BIT;
         }
-#endif
 
-        for (size_t i = 0; i < shaders.size(); ++i)
+        else if (filepath.find("frag") != filepath.npos)
         {
-            Shader& shader = shaders[i];
+            return VK_SHADER_STAGE_FRAGMENT_BIT;
+        }
 
-            infos[i] = shader.createInfo;
-            infos[i].pCode = shader.code.code.data();
+        LOG_ERROR("Don't know how to read shader file: {}, name must contain the type of shader (vert, frag, etc)", filepath);
 
-            vkShaders[i] = shader;
+        return VK_SHADER_STAGE_ALL;
+    }
+
+    inline VkShaderStageFlags nextStage(std::string_view filepath)
+    {
+        if (filepath.find("vert") != filepath.npos)
+        {
+            return VK_SHADER_STAGE_FRAGMENT_BIT;
+        }
+
+        else if (filepath.find("frag") != filepath.npos)
+        {
+            return 0;
+        }
+
+        LOG_ERROR("Don't know how to read shader file: {}, name must contain the type of shader (vert, frag, etc)", filepath);
+
+        return -1;
+    }
+
+    std::vector<PreparedShader> loadShaders(const
+        std::vector<ShaderBinary>& shaders)
+    {
+        std::vector<PreparedShader> prepared = {};
+
+        for (const ShaderBinary& shader : shaders)
+        {
+            prepared.emplace_back(shader);
+
+            prepared.back().createInfo = {
+                VK_STRUCTURE_TYPE_SHADER_CREATE_INFO_EXT,
+                nullptr,
+                VK_SHADER_CREATE_LINK_STAGE_BIT_EXT,
+                stage(shader.filepath),
+                nextStage(shader.filepath),
+                shader.codeType,
+                static_cast<uint32_t>(shader.code.size()),
+                nullptr,
+                "main",
+            };
+        }
+
+        return prepared;
+    }
+
+    ShaderBinary readSPIRV(std::string_view filepath)
+    {
+        ShaderBinary shader = {};
+
+        std::ifstream file(filepath.data(),
+            std::ios::in | std::ios::binary);
+
+        file.seekg(0, std::ios_base::end);
+        shader.code = std::vector<char>(file.tellg());
+
+        file.seekg(0);
+        file.read(shader.code.data(), shader.code.size());
+
+        shader.codeType = VK_SHADER_CODE_TYPE_SPIRV_EXT;
+        shader.filepath = filepath;
+
+        return shader;
+    }
+
+    std::vector<Shader> createShaders(VkDevice device,
+        const std::vector<PreparedShader>& preparedShaders,
+        const std::vector<VkDescriptorSetLayout>& layouts,
+        const std::vector<VkPushConstantRange>& pushConstants)
+    {
+        std::vector<VkShaderCreateInfoEXT> createInfos = {};
+        std::vector<VkShaderEXT> shaders = {};
+
+        for (const PreparedShader& shader : preparedShaders)
+        {
+            createInfos.push_back(shader.createInfo);
+
+            createInfos.back().setLayoutCount =
+                static_cast<uint32_t>(layouts.size());
+            createInfos.back().pSetLayouts = layouts.data();
+
+            createInfos.back().pushConstantRangeCount =
+                static_cast<uint32_t>(pushConstants.size());
+            createInfos.back().pPushConstantRanges = pushConstants.data();
+            
+            createInfos.back().pCode = shader.binary.code.data();
+
+            shaders.emplace_back();
         }
 
         VkResult res = vkCreateShadersEXT(device,
-            static_cast<uint32_t>(shaders.size()),
-            infos.data(), nullptr, vkShaders.data());
+            static_cast<uint32_t>(createInfos.size()),
+            createInfos.data(), nullptr, shaders.data());
 
+        // most likely from a corrupted cache,
+        // at least assume that
         if (res == VK_ERROR_INCOMPATIBLE_SHADER_BINARY_EXT)
         {
-            LOG_WARNING("Incompatible shader binaries! (failed loading cached shaders, falling back on actual files!!)");
-
-            std::vector<Shader> newShaders(shaders.size());
+#if GLEEC_DEBUG
             for (size_t i = 0; i < shaders.size(); ++i)
             {
-                VkShaderEXT shader = vkShaders[i];
-                Shader& actualShader = shaders[i];
+                if (shaders[i] == VK_NULL_HANDLE)
+                    LOG_WARNING("Cache was corrupted for shader: {}",
+                        preparedShaders[i].binary.filepath);
+            }
+#endif
 
-                if (shader == VK_NULL_HANDLE)
+            std::vector<ShaderBinary> preparedAgain = {};
+
+            // must all be the same type (spirv)
+            for (const PreparedShader& prepared : preparedShaders)
+            {
+                if (prepared.binary.codeType ==
+                    VK_SHADER_CODE_TYPE_BINARY_EXT)
                 {
-                    LOG_MESSAGE("Shader cache file: {} was corrupted!",
-                        actualShader.name);
-
-                    newShaders[i] = readShader(
-                        actualShader.filepath,
-                        actualShader.createInfo.stage,
-                        actualShader.createInfo.nextStage,
-                        actualShader.createInfo.flags,
-                        actualShader.createInfo.setLayoutCount,
-                        actualShader.createInfo.pSetLayouts,
-                        actualShader.createInfo.pushConstantRangeCount,
-                        actualShader.createInfo.pPushConstantRanges,
-                        actualShader.createInfo.pSpecializationInfo);
+                    preparedAgain.emplace_back(readSPIRV(prepared.binary.filepath));
                 }
 
                 else
                 {
-                    newShaders[i] = shaders[i];
+                    preparedAgain.emplace_back(prepared.binary);
                 }
-
-                Shader& newShader = newShaders[i];
-
-                infos[i] = newShader.createInfo;
-                infos[i].pCode = newShader.code.code.data();
             }
 
-            vkCreateShadersEXT(device, static_cast<uint32_t>(shaders.size()),
-                infos.data(), nullptr, vkShaders.data());
-
-            LOG_MESSAGE("Reloaded shaders from failed cached files!");
+            return createShaders(device, loadShaders(preparedAgain),
+                layouts, pushConstants);
         }
 
-        for (size_t i = 0; i < shaders.size(); ++i)
+        std::vector<Shader> tempShaders(shaders.size());
+
+        for (size_t i = 0; i < tempShaders.size(); ++i)
         {
-            shaders[i].shader = vkShaders[i];
+            tempShaders[i].shader = shaders[i];
+
+            tempShaders[i].createInfo = preparedShaders[i].createInfo;
+            tempShaders[i].code = preparedShaders[i].binary;
         }
+
+        return tempShaders;
     }
 
-    void createShader(VkDevice device, Shader& shader)
+    std::vector<PreparedShader> loadShaders(
+        const std::vector<std::string>& shaders)
     {
-#if GLEEC_DEBUG
-        // shader cache and file differ, load the file instead
-        if (shader.loadedFromCache && !verifyCache(device, shader))
+        std::vector<ShaderBinary> shaderBinaries = {};
+
+        for (const std::string& filepath : shaders)
         {
-            shader = readShader(
-                shader.filepath,
-                shader.createInfo.stage,
-                shader.createInfo.nextStage,
-                shader.createInfo.flags,
-                shader.createInfo.setLayoutCount,
-                shader.createInfo.pSetLayouts,
-                shader.createInfo.pushConstantRangeCount,
-                shader.createInfo.pPushConstantRanges,
-                shader.createInfo.pSpecializationInfo);
-
-            LOG_MESSAGE("Shader cache: {} differs from shader file: {}, loading file instead!",
-                cachedShaderFilepath(shader.name), shader.filepath);
+            shaderBinaries.emplace_back(readSPIRV(filepath));
         }
-#endif
 
-        shader.createInfo.pCode = shader.code.code.data();
-        VkResult res = vkCreateShadersEXT(device, 1, &shader.createInfo,
-            nullptr, &shader.shader);
-
-        if (res == VK_ERROR_INCOMPATIBLE_SHADER_BINARY_EXT)
-        {
-            LOG_WARNING("Incompatible shader binaries! (failed loading cached shaders, falling back on actual files!!)");
-
-            if (shader != VK_NULL_HANDLE)
-            {
-                destroyShader(device, shader);
-            }
-
-            else
-            {
-                LOG_MESSAGE("Shader cache file: {} was corrupted!",
-                    shader.name);
-            }
-
-            Shader newShader = readShader(
-                shader.filepath,
-                shader.createInfo.stage,
-                shader.createInfo.nextStage,
-                shader.createInfo.flags,
-                shader.createInfo.setLayoutCount,
-                shader.createInfo.pSetLayouts,
-                shader.createInfo.pushConstantRangeCount,
-                shader.createInfo.pPushConstantRanges,
-                shader.createInfo.pSpecializationInfo);
-
-            shader.createInfo = newShader.createInfo;
-            shader.createInfo.pCode = newShader.code.code.data();
-
-            vkCreateShadersEXT(device, 1, &shader.createInfo,
-                nullptr, &shader.shader);
-
-            LOG_MESSAGE("Reloaded shaders from failed cached files!");
-        }
-    }
-
-    bool verifyCache(VkDevice device, const Shader& shader)
-    {
-        // cant link a shader of only one stage
-        constexpr uint32_t removeLink = ~(VK_SHADER_CREATE_LINK_STAGE_BIT_EXT);
-
-        Shader noncached = readShader(shader.filepath,
-            shader.createInfo.stage,
-            shader.createInfo.nextStage,
-            shader.createInfo.flags & removeLink,
-            shader.createInfo.setLayoutCount,
-            shader.createInfo.pSetLayouts,
-            shader.createInfo.pushConstantRangeCount,
-            shader.createInfo.pPushConstantRanges,
-            shader.createInfo.pSpecializationInfo);
-
-        createShader(device, noncached);
-
-        bool val = getShaderBinary(device, noncached) == shader.code;
-
-        destroyShader(device, noncached.shader);
-
-        return val;
+        return loadShaders(shaderBinaries);
     }
 }

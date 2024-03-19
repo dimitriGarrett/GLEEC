@@ -27,7 +27,6 @@
 #include "Core/Graphics/GPUManager.h"
 
 #include "WindowInfo.h"
-#include "Core/Image/Image.h"
 
 namespace GLEEC::Window
 {
@@ -63,7 +62,8 @@ namespace GLEEC::Window
 #endif
         }
 
-        void icon(const Image::Image& image) const
+        // TODO: how to handle images well?
+        /* void icon(const Image::Image& image) const
         {
 #if GLEEC_WINDOW_BACKEND == WINDOW_BACKEND_GLFW
             GLFWimage i = {};
@@ -74,7 +74,7 @@ namespace GLEEC::Window
 
             Internal::Window::glfw::setWindowIcon(internalWindow, i);
 #endif
-        }
+        } */
 
         math::ivec2 pos() const
         {

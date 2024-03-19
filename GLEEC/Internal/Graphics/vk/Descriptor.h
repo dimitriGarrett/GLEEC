@@ -9,18 +9,6 @@
 
 namespace GLEEC::Internal::Graphics::vk
 {
-    // all the information for a descriptor buffer
-    // to handle a descriptorSetLayout
-    struct DescriptorBufferDescriptorSetLayout
-    {
-        VkDescriptorSetLayout layout = {};
-
-        VkDeviceSize size = {};
-
-        VkDeviceSize alignment = {};
-        VkDeviceSize offset = {};
-    };
-
     inline VkPhysicalDeviceDescriptorBufferPropertiesEXT getPhysicalDeviceDescriptorBufferProperties(
         VkPhysicalDevice physicalDevice)
     {
@@ -76,27 +64,6 @@ namespace GLEEC::Internal::Graphics::vk
             binding, &offset);
 
         return offset;
-    }
-
-    inline DescriptorBufferDescriptorSetLayout getDescriptorBufferDescriptorSetLayout(
-        VkPhysicalDevice physicalDevice, VkDevice device,
-        uint32_t binding, VkDescriptorSetLayout setLayout)
-    {
-        DescriptorBufferDescriptorSetLayout layout = {};
-
-        layout.offset = getDescriptorSetLayoutBindingOffset(device,
-            binding, setLayout);
-
-        layout.alignment = 
-            getPhysicalDeviceDescriptorBufferProperties(physicalDevice).
-                descriptorBufferOffsetAlignment;
-
-        layout.size = getDescriptorSetLayoutAlignedSize(device,
-            setLayout, layout.alignment);
-
-        layout.layout = setLayout;
-
-        return layout;
     }
 
     inline VkDeviceSize getDescriptorSize(VkPhysicalDevice physicalDevice,

@@ -3,6 +3,7 @@
 #include "math/utility/length_t.h"
 #include "math/utility/cseq.h"
 
+#include <initializer_list>
 #include <cassert>
 
 namespace GLEEC::math

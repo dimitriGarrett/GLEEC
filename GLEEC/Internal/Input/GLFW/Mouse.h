@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Codes/MouseButton.h"
-
 #include "Internal/Window/Window.h"
 
 namespace GLEEC::Internal::Input::glfw

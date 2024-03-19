@@ -48,7 +48,7 @@ namespace GLEEC::Audio
         init(nullptr);
     }
 
-    inline void terminate()
+    inline void destroy()
     {
         SpeakerManager::destroySpeakers();
         SoundManager::destroySounds();

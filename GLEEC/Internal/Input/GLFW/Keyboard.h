@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Codes/Key.h"
 #include "Internal/Window/Window.h"
 
 namespace GLEEC::Internal::Input::glfw
@@ -18,7 +17,7 @@ namespace GLEEC::Internal::Input::glfw
 
     inline std::string_view getKeyName(int32_t key)
     {
-        return key != KEY_UNKNOWN ? getKeyName(key, 0) : "Unknown Key!";
+        return key != -1 ? getKeyName(key, 0) : "Unknown Key!";
     }
 
     inline bool getKey(Window::glfw::Window window, int32_t key)

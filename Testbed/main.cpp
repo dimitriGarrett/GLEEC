@@ -1,9 +1,17 @@
+#include "Core/Config/Configuration.h"
 #include "Core/Graphics/BufferManager.h"
+#include "Core/Graphics/Renderer/Model/Index.h"
+#include "Core/Graphics/Renderer/Model/Mesh.h"
+#include "Core/Graphics/Renderer/Model/MeshManager.h"
+#include "Core/Graphics/Renderer/Model/Model.h"
+#include "Core/Graphics/Renderer/Model/ModelManager.h"
+#include "Core/Graphics/Renderer/Model/Vertex.h"
 #include "Core/Graphics/ShaderManager.h"
+#include "Core/Input/InputManager.h"
+#include "Core/Input/Key.h"
 #include "Init/Init.h"
 
 #include "Core/Input/Remapping/Remapper.h"
-#include "Core/Input/Update.h"
 #include "Core/Audio/Helper.h"
 
 #include "Core/Graphics/Frame.h"
@@ -53,43 +61,12 @@ int main()
 
     double this_frame = 0.0;
 
-    Graphics::ShaderManager::init(
-    {
-        // these shaders needed linked together
-        {
-            "vert.spv", "frag.spv"
-        }
-    });
+    LOG_MESSAGE("TODO: NEED DEPTH BUFFERING SOON");
+    LOG_MESSAGE("TODO: NEED MULTISAMPLING SOON");
+    LOG_MESSAGE("TODO: NEED MIPMAPPING SOON");
 
-    LOG_MESSAGE("NEED DEPTH BUFFERING SOON");
-    LOG_MESSAGE("NEED MULTISAMPLING SOON");
-    LOG_MESSAGE("NEED MIPMAPPING SOON");
-
-    std::vector<float> verts = {
-        0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-        0.5f, 0.5f,  0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-        -0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-        /* -0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-        -0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-        0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, */
-    };
-
-    auto buffer = Graphics::BufferManager::createVertexBuffer(verts);
-
-    /* auto buffer = Internal::Graphics::vk::createBuffer(
-        Graphics::GPUManager::activeGPU.allocator,
-        Internal::Graphics::vk::createBuffer(9 * sizeof(float),
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT),
-        VMA_MEMORY_USAGE_GPU_ONLY);
-
-    auto buffer2 = Internal::Graphics::vk::createBuffer(
-        Graphics::GPUManager::activeGPU.allocator,
-        Internal::Graphics::vk::createBuffer(9 * sizeof(float),
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT),
-        VMA_MEMORY_USAGE_CPU_TO_GPU); */
-
-    /* memcpy_s(buffer2.map, verts.size() * sizeof(float),
-        verts.data(), verts.size() * sizeof(float)); */
+    Graphics::Model model = Graphics::ModelManager::createModel(
+        Config::Configuration::gets("cwd") + "assets/models/sphere.obj");
 
     while (Window::WindowManager::anyOpen())
     {
@@ -97,12 +74,17 @@ int main()
 
         Graphics::FrameManager::begin();
 
-        Graphics::FrameData& frame = Graphics::FrameManager::frames[0].frames[
-            Graphics::FrameManager::activeFrame];
+        static size_t i = 0;
 
-        Graphics::BufferManager::bindVertexBuffer(frame.commandBuffer, buffer);
+        if (Input::InputManager::keyPressed(KEY_C))
+        {
+            i = (i + 1) % 2;
+        }
 
-        vkCmdDraw(frame.commandBuffer, 3, 1, 0, 0);
+        if (!Window::WindowManager::windows[i].minimized)
+        {
+            Graphics::ModelManager::renderModels();
+        }
 
         Graphics::FrameManager::end();
 
@@ -112,10 +94,8 @@ int main()
         /* Window::WindowManager::activeWindow().title(
             std::format("FPS: {}", fps)); */
 
-        Input::update();
+        Input::InputManager::update();
     }
 
-    Graphics::BufferManager::destroyBuffer(buffer);
-
-    GLEEC::terminate();
+    GLEEC::destroy();
 }

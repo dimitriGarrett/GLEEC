@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Codes/Gamepad.h"
-
 #include "Internal/Input/Backends/GLFW.h"
 
 #include <string_view>

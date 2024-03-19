@@ -82,6 +82,17 @@ namespace GLEEC::Internal::Graphics::vk
         cmdPipelineBarrier2(commandBuffer, info);
     }
 
+    inline void transitionColorImageTransferDstToShaderReadOnly(
+        VkCommandBuffer commandBuffer, VkImage image)
+    {
+        VkImageMemoryBarrier2 barrier =
+            colorImageMemoryBarrierTransferDstToShaderReadOnly(image);
+
+        VkDependencyInfo info = dependencyInfo(barrier);
+
+        cmdPipelineBarrier2(commandBuffer, info);
+    }
+
     inline void transitionDepthImageUndefinedToGeneral(VkCommandBuffer commandBuffer,
         VkImage image)
     {

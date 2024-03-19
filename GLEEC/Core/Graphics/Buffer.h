@@ -13,5 +13,7 @@ namespace GLEEC::Graphics
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
         Internal::Graphics::vk::Buffer buffer = {};
 #endif
+
+        uint32_t indexType = {};
     };
 }

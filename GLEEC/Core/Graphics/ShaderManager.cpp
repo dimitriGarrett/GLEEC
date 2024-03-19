@@ -1,228 +1,227 @@
 #include "ShaderManager.h"
-#include "Core/Graphics/Renderer/Model/VertexManager.h"
-#include "Core/Window/WindowManager.h"
-#include "GPUManager.h"
+#include "ShaderReflection.h"
 
-#include "Core/Config/Configuration.h"
-
-#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-#include "Internal/Graphics/vk/DynamicShaderState.h"
-#endif
+#include "Core/Caching/Specializations.h"
 
 namespace GLEEC::Graphics
 {
-    std::unordered_map<size_t, Shader> ShaderManager::shaders = {};
+    std::unordered_map<size_t, Shaders> ShaderManager::shaders = {};
 
-    ShaderManagerState ShaderManager::state = {};
+#define SHADER_CLASS(group)\
+    group.substr(group.find_last_of('/') + 1, 2)
+#define SHADER_DSLB(group) "shader-dslb-" + SHADER_CLASS(group)
 
-    Shader& ShaderManager::loadShader(std::string_view filepath)
+    void ShaderManager::init(const std::vector<std::vector<std::string>>&
+        shaderGroups)
     {
-        if (shaders.contains(key(filepath)))
+        for (const std::vector<std::string>& shaderGroup : shaderGroups)
         {
-            return shaders.at(key(filepath));
-        }
+            std::string shaderClass = SHADER_CLASS(shaderGroup[0]);
 
-        Shader& shader = shaders[key(filepath)];
-#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-        shader.shader = Internal::Graphics::vk::loadShader(filepath,
-            static_cast<VkShaderStageFlagBits>(
-                getShaderTypeFromFilepath(filepath)),
-            getNextShaderTypeFromFilepath(filepath),
-            0, {}, {});
-#endif
-        return shader;
-    }
+            Shaders& grouped = getShaders(shaderClass);
 
-    void ShaderManager::destroyShader(Shader& shader)
-    {
-#if GLEEC_GRAPHICS_BACKEND
-        Internal::Graphics::vk::destroyShader(
-            GPUManager::activeGPU.device, shader.shader);
-#endif
-    }
-
-    uint32_t ShaderManager::getShaderTypeFromFilepath(std::string_view filepath)
-    {
-#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-        if (filepath.find("vert") != filepath.npos)
-        {
-            return VK_SHADER_STAGE_VERTEX_BIT;
-        }
-
-        else if (filepath.find("frag") != filepath.npos)
-        {
-            return VK_SHADER_STAGE_FRAGMENT_BIT;
-        }
-
-        LOG_ERROR("Don't know how to read shader file: {}, name must contain the type of shader (vert, frag, etc)", filepath);
-
-        return -1;
-#endif
-    }
-
-    uint32_t ShaderManager::getNextShaderTypeFromFilepath(std::string_view filepath)
-    {
-#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-        if (filepath.find("vert") != filepath.npos)
-        {
-            return VK_SHADER_STAGE_FRAGMENT_BIT;
-        }
-
-        else if (filepath.find("frag") != filepath.npos)
-        {
-            return 0;
-        }
-
-        LOG_ERROR("Don't know how to read shader file: {}, name must contain the type of shader (vert, frag, etc)", filepath);
-
-        return -1;
-#endif
-    }
-
-    inline void ShaderManager::init(const std::vector<std::vector<std::string>>& filepaths)
-    {
-        std::string shaderdir = Config::Configuration::gets("cwd")
-            + "shaders/";
-
-        for (const auto& linked : filepaths)
-        {
-#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-            std::vector<Internal::Graphics::vk::Shader> temp = {};
-#endif
-
-            for (const std::string& first_filepath : linked)
+            // descriptor set bindings cache
+            std::string cached = SHADER_DSLB(shaderGroup[0]);
+            if (Caching::getCachedResourceExists(Caching::DESCRIPTOR_SET_LAYOUT,
+                cached))
             {
-                std::string filepath = shaderdir + first_filepath;
+                grouped.bindings = Caching::createPossiblyCachedResource
+                    <decltype(grouped.bindings)>(cached);
 
-                loadShader(filepath);
+                LOG_MESSAGE("Descriptor set layout: {} loaded from cache!",
+                    cached);
+            }
 
+            else
+            {
+                grouped.bindings = reflectShaders(
+                    Internal::Graphics::vk::loadShaders(shaderGroup)).bindings;
+
+                LOG_MESSAGE("Descriptor set layout: {} reflected from: {}!",
+                    cached, shaderClass);
+            }
+            
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-                shaders[key(filepath)].shader.createInfo.flags |=
-                    VK_SHADER_CREATE_LINK_STAGE_BIT_EXT;
-#endif
+            for (const Internal::Graphics::vk::DescriptorSetBindings& bindings :
+                grouped.bindings)
+            {
+                grouped.descriptorSetLayouts.push_back(
+                    Internal::Graphics::vk::createDescriptorSetLayout(
+                        GPUManager::activeGPU.device, bindings));
+            }
 
-                temp.push_back(shaders[key(filepath)].shader);
+            grouped.pipelineLayout =
+                Internal::Graphics::vk::createPipelineLayout(
+                    GPUManager::activeGPU.device,
+                    grouped.descriptorSetLayouts, {});
+
+            std::vector<Internal::Graphics::vk::ShaderBinary> binary = {};
+
+            bool redo = false;
+            if (Caching::getCachedResourceExists(Caching::SHADER,
+                Caching::getCachedName(shaderGroup[0])))
+            {
+                for (const std::string& shader : shaderGroup)
+                {
+                    binary.push_back(Caching::createPossiblyCachedResource
+                        <Internal::Graphics::vk::ShaderBinary>(shader));
+                    binary.back().filepath = shader;
+                }
+            }
+
+            else
+            {
+                redo = true;
+                for (const std::string& shader : shaderGroup)
+                {
+                    binary.push_back(Internal::Graphics::vk::readSPIRV(shader));
+                }
+            }
+
+            std::vector<Internal::Graphics::vk::PreparedShader> prepared =
+                Internal::Graphics::vk::loadShaders(binary);
+
+            std::vector<Internal::Graphics::vk::Shader> vkShaders =
+                Internal::Graphics::vk::createShaders(
+                    GPUManager::activeGPU.device,
+                    prepared, grouped.descriptorSetLayouts, {});
+
+            // HUGE HACK: instead of figuring out why loading shaders only works
+            // when using caching, just load the shaders as if they were cached.
+            //
+            // TODO: fix this and figure out why this wasn't working in the first place
+            //
+            // MAY REQUIRE a complete rewrite of the shader manager, complete
+            // rewrites of the vk shader and caching have already been done to no avail.
+            if (redo)
+            {
+                binary.clear();
+
+                int i = 0;
+                for (const auto& shader : vkShaders)
+                {
+                    binary.push_back(Internal::Graphics::vk::getShaderBinary(
+                        GPUManager::activeGPU.device, shader));
+
+                    binary.back().codeType = VK_SHADER_CODE_TYPE_BINARY_EXT;
+                    binary.back().filepath = prepared[i++].binary.filepath;
+                }
+
+                Internal::Graphics::vk::destroyShaders(
+                    GPUManager::activeGPU.device, vkShaders);
+
+                prepared = Internal::Graphics::vk::loadShaders(binary);
+
+                vkShaders = Internal::Graphics::vk::createShaders(
+                    GPUManager::activeGPU.device, prepared,
+                    grouped.descriptorSetLayouts, {});
+            }
+
+            for (const Internal::Graphics::vk::Shader& shader : vkShaders)
+            {
+                grouped.shaders.emplace_back(shader);
+            }
+#endif
+        }
+    }
+
+    void ShaderManager::init(std::string_view directory)
+    {
+        // iterate through directory and get all shaders present
+        std::vector<std::vector<std::string>> shaders = {};
+        std::unordered_map<size_t, size_t> shaderTypes = {};
+
+        for (const auto& entry : std::filesystem::directory_iterator(directory))
+        {
+            std::string path = entry.path().string();
+
+            if (!path.ends_with("spv"))
+            {
+                LOG_MESSAGE("Skipped file: {} when iterating shader directory: {}!",
+                    path, directory);
+
+                continue;
+            }
+
+            size_t shaderClass = std::hash<std::string>{}(SHADER_CLASS(path));
+            size_t offset = 0;
+
+            if (shaderTypes.contains(shaderClass))
+            {
+                offset = shaderTypes.at(shaderClass);
+            }
+
+            else
+            {
+                offset = (shaderTypes[shaderClass] = shaderTypes.size());
+                shaders.emplace_back();
+            }
+
+            shaders[offset].push_back(path);
+        }
+
+        return init(shaders);
+    }
+
+    inline void ShaderManager::init()
+    {
+        return init(Config::Configuration::gets("shaders_dir"));
+    }
+
+    void ShaderManager::destroy()
+    {
+        for (auto& [_, shaderGroup] : shaders)
+        {
+            for (const Shader& shader : shaderGroup.shaders)
+            {
+#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
+                Caching::cacheResource(shader.shader.code.filepath,
+                    Internal::Graphics::vk::getShaderBinary(
+                        GPUManager::activeGPU.device, shader.shader));
+
+                Internal::Graphics::vk::destroyShader(
+                    GPUManager::activeGPU.device, shader.shader);
+#endif
             }
 
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-            Internal::Graphics::vk::createShaders(
-                GPUManager::activeGPU.device,
-                temp);
+            Caching::cacheResource(
+                SHADER_DSLB(shaderGroup.shaders[0].shader.code.filepath),
+                shaderGroup.bindings);
 
-            for (const auto& shader : temp)
+            for (const Internal::Graphics::vk::DescriptorSetLayout& layout :
+                shaderGroup.descriptorSetLayouts)
             {
-                shaders[key(shader.filepath)].shader = shader;
+                Internal::Graphics::vk::destroyDescriptorSetLayout(
+                    GPUManager::activeGPU.device, layout);
             }
+
+            Internal::Graphics::vk::destroyPipelineLayout(
+                GPUManager::activeGPU.device, shaderGroup.pipelineLayout);
 #endif
         }
     }
 
-    inline void ShaderManager::destroy()
+    void ShaderManager::bindShaders(const FrameData& frame, size_t shaderClass)
     {
-        for (auto& [_, shader] : shaders)
-        {
-            destroyShader(shader);
-        }
-    }
+        Shaders& shaderShaders = shaders[shaderClass];
 
-    inline void ShaderManager::bind(FrameData& frame, size_t i)
-    {
-#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-        // bind shaders
-        {
-            // need to bind null shader to unused shaders
-            VkShaderStageFlagBits unused[] = {
-                VK_SHADER_STAGE_VERTEX_BIT,
-                VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
-                VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
-                VK_SHADER_STAGE_GEOMETRY_BIT,
-                VK_SHADER_STAGE_FRAGMENT_BIT,
-                VK_SHADER_STAGE_COMPUTE_BIT,
-            };
+        VkShaderStageFlagBits unused[] = {
+            VK_SHADER_STAGE_VERTEX_BIT,
+            VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
+            VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
+            VK_SHADER_STAGE_GEOMETRY_BIT,
+            VK_SHADER_STAGE_FRAGMENT_BIT,
+            VK_SHADER_STAGE_COMPUTE_BIT,
+        };
 
+        Internal::Graphics::vk::cmdBindShaders(frame.commandBuffer,
+            sizeof(unused) / sizeof(unused[0]), unused, nullptr);
+
+        for (const Shader& shader : shaderShaders.shaders)
+        {
             Internal::Graphics::vk::cmdBindShaders(frame.commandBuffer,
-                sizeof(unused) / sizeof(unused[0]), unused, nullptr);
-
-            for (auto& [_, shader] : ShaderManager::shaders)
-            {
-                Internal::Graphics::vk::cmdBindShaders(frame.commandBuffer,
-                    1, &shader.shader.createInfo.stage, &shader.shader.shader);
-            }
+                1, &shader.shader.createInfo.stage, &shader.shader.shader);
         }
-#endif
-    }
-
-    inline void ShaderManager::setState(FrameData& frame, size_t i)
-    {
-        Window::Window& window = Window::WindowManager::windows[i];
-
-#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-        VkCommandBuffer commandBuffer = frame.commandBuffer;
-        
-        Internal::Graphics::vk::cmdSetRasterizerDiscardEnable(commandBuffer,
-            !state.enableRendering);
-
-        VkViewport viewport = {};
-        viewport.width = static_cast<float>(window.size().x),
-        viewport.height = static_cast<float>(window.size().y),
-
-        Internal::Graphics::vk::cmdSetViewport(commandBuffer, viewport);
-
-        VkRect2D scissor = {};
-        scissor.extent.width = window.size().x;
-        scissor.extent.height = window.size().y;
-
-        Internal::Graphics::vk::cmdSetScissor(commandBuffer, scissor);
-
-        Internal::Graphics::vk::cmdSetLineWidth(commandBuffer, state.lineWidth);
-
-        Internal::Graphics::vk::cmdSetPolygonMode(commandBuffer,
-            state.polygonMode);
-        Internal::Graphics::vk::cmdSetPrimitiveTopology(commandBuffer,
-            state.topology);
-
-        Internal::Graphics::vk::cmdSetColorBlendEnable(commandBuffer, 1);
-        Internal::Graphics::vk::cmdSetColorBlendEquation(commandBuffer, state.blendEquation);
-
-        Internal::Graphics::vk::cmdSetRasterizationSamples(commandBuffer,
-            state.samples);
-
-        Internal::Graphics::vk::cmdSetSampleMask(commandBuffer,
-            state.samples, state.sampleMask);
-        Internal::Graphics::vk::cmdSetColorWriteMask(commandBuffer,
-            state.colorWriteMask);
-
-        Internal::Graphics::vk::cmdSetAlphaToCoverageEnable(commandBuffer, 0);
-        Internal::Graphics::vk::cmdSetAlphaToOneEnable(commandBuffer, 0);
-
-        Internal::Graphics::vk::cmdSetCullMode(commandBuffer,
-            state.cullMode);
-        Internal::Graphics::vk::cmdSetFrontFace(commandBuffer,
-            state.frontFace);
-
-        Internal::Graphics::vk::cmdSetDepthTestEnable(commandBuffer,
-            VK_FALSE);
-        Internal::Graphics::vk::cmdSetDepthWriteEnable(commandBuffer,
-            VK_FALSE);
-        Internal::Graphics::vk::cmdSetDepthBoundsTestEnable(commandBuffer,
-            VK_FALSE);
-        Internal::Graphics::vk::cmdSetDepthBiasEnable(commandBuffer,
-            VK_FALSE);
-        Internal::Graphics::vk::cmdSetStencilTestEnable(commandBuffer,
-            VK_FALSE);
-
-        Internal::Graphics::vk::cmdSetDepthClampEnable(commandBuffer,
-            VK_FALSE);
-
-        Internal::Graphics::vk::cmdSetPrimitiveRestartEnable(commandBuffer,
-            VK_FALSE);
-
-        Internal::Graphics::vk::cmdSetLogicOpEnable(commandBuffer,
-            VK_FALSE);
-
-        Internal::Graphics::vk::cmdSetVertexInput(commandBuffer,
-            VertexManager::bindingDescription(),
-            VertexManager::attributeDescription());
-#endif
     }
 }

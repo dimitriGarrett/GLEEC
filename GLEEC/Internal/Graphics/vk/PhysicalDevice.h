@@ -301,6 +301,11 @@ namespace GLEEC::Internal::Graphics::vk
         return properties;
     }
 
+    inline bool getPhysicalDeviceSupportsAnisotropy(VkPhysicalDevice physicalDevice)
+    {
+        return getPhysicalDeviceFeatures(physicalDevice).samplerAnisotropy;
+    }
+
     namespace properties
     {
         inline uint32_t getPhysicalDeviceApiVersion(VkPhysicalDevice physicalDevice)

@@ -1,1 +1,2 @@
-langs_dir = cwd + /langs/
+langs_dir = cwd + langs/
+shaders_dir = cwd + shaders/

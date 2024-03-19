@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Config/Init.h"
-#include "Core/Input/Init.h"
+#include "Core/Input/InputManager.h"
 #include "Core/Event/Event.h"
 #include "Core/Window/Init.h"
 #include "Core/Audio/Init.h"
@@ -15,7 +15,7 @@ namespace GLEEC
     {
         printInitString();
 
-        Input::init();
+        Input::InputManager::init();
         Window::init();
         Event::init();
 
@@ -47,12 +47,12 @@ namespace GLEEC
         init(std::vector<Window::WindowInfo>{ windowInfo });
     }
 
-    inline void terminate()
+    inline void destroy()
     {
-        Audio::terminate();
-        Window::terminate();
-        Input::terminate();
+        Audio::destroy();
+        Window::destroy();
+        Input::InputManager::destroy();
 
-        Graphics::terminate();
+        Graphics::destroy();
     }
 }

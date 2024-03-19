@@ -1,5 +1,6 @@
 #include "FrameManager.h"
 
+#include "Core/Graphics/Renderer/RenderStateManager.h"
 #include "ShaderManager.h"
 #include "GPUManager.h"
 #include "RenderTargetManager.h"
@@ -171,19 +172,19 @@ namespace GLEEC::Graphics
         std::swap(fa.frame.swapchainSemaphore, fb.frame.swapchainSemaphore);
         std::swap(fa.frame.renderSemaphore, fb.frame.renderSemaphore);
 
-            fa.submitInfo.commandBuffer.commandBuffer = fa.commandBuffer;
-            fa.submitInfo.waitSemaphore.semaphore = fa.swapchainSemaphore;
-            fa.submitInfo.signalSemaphore.semaphore = fa.renderSemaphore;
-            fa.submitInfo.submit.pWaitSemaphoreInfos = &fa.submitInfo.waitSemaphore;
-            fa.submitInfo.submit.pSignalSemaphoreInfos = &fa.submitInfo.signalSemaphore;
-            fa.submitInfo.submit.pCommandBufferInfos = &fa.submitInfo.commandBuffer;
+        fa.submitInfo.commandBuffer.commandBuffer = fa.commandBuffer;
+        fa.submitInfo.waitSemaphore.semaphore = fa.swapchainSemaphore;
+        fa.submitInfo.signalSemaphore.semaphore = fa.renderSemaphore;
+        fa.submitInfo.submit.pWaitSemaphoreInfos = &fa.submitInfo.waitSemaphore;
+        fa.submitInfo.submit.pSignalSemaphoreInfos = &fa.submitInfo.signalSemaphore;
+        fa.submitInfo.submit.pCommandBufferInfos = &fa.submitInfo.commandBuffer;
 
-            fb.submitInfo.commandBuffer.commandBuffer = fb.commandBuffer;
-            fb.submitInfo.waitSemaphore.semaphore = fb.swapchainSemaphore;
-            fb.submitInfo.signalSemaphore.semaphore = fb.renderSemaphore;
-            fb.submitInfo.submit.pWaitSemaphoreInfos = &fb.submitInfo.waitSemaphore;
-            fb.submitInfo.submit.pSignalSemaphoreInfos = &fb.submitInfo.signalSemaphore;
-            fb.submitInfo.submit.pCommandBufferInfos = &fb.submitInfo.commandBuffer;
+        fb.submitInfo.commandBuffer.commandBuffer = fb.commandBuffer;
+        fb.submitInfo.waitSemaphore.semaphore = fb.swapchainSemaphore;
+        fb.submitInfo.signalSemaphore.semaphore = fb.renderSemaphore;
+        fb.submitInfo.submit.pWaitSemaphoreInfos = &fb.submitInfo.waitSemaphore;
+        fb.submitInfo.submit.pSignalSemaphoreInfos = &fb.submitInfo.signalSemaphore;
+        fb.submitInfo.submit.pCommandBufferInfos = &fb.submitInfo.commandBuffer;
 #endif
 
         bool bb = recreateFlags[b];
@@ -299,8 +300,8 @@ namespace GLEEC::Graphics
 
         beginRendering(i);
 
-        ShaderManager::bind(frameData, i);
-        ShaderManager::setState(frameData, i);
+/*         ShaderManager::bind(frameData, i); */
+        RenderStateManager::prepareState(frameData, i);
 #endif
     }
 

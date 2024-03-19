@@ -228,6 +228,14 @@ namespace GLEEC::Internal::Graphics::vk
             VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
     }
 
+    inline VkImageMemoryBarrier2 colorImageMemoryBarrierTransferDstToShaderReadOnly(VkImage image)
+    {
+        return colorImageMemoryBarrier(image,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT,
+            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT);
+    }
+
     inline VkDependencyInfo dependencyInfo(const VkImageMemoryBarrier2& barrier)
     {
         VkDependencyInfo info = {
