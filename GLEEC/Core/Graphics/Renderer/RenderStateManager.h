@@ -1,7 +1,7 @@
 #pragma once
 
 #include "RenderState.h"
-#include "Core/Graphics/Frame.h"
+#include "Frame.h"
 
 #include <vector>
 

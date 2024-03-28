@@ -1,38 +1,39 @@
 #include "ModelManager.h"
 
 #include "Core/Graphics/BufferManager.h"
-#include "Core/Graphics/ShaderManager.h"
-#include "Core/Graphics/FrameManager.h"
+#include "Core/Graphics/Renderer/ShaderManager.h"
+#include "Core/Graphics/Renderer/Frame.h"
+#include "Core/Graphics/Renderer/ShaderResourceManager.h"
+
+#include "Core/Graphics/Camera/CameraManager.h"
 
 namespace GLEEC::Graphics
 {
-    std::vector<Model> ModelManager::models = {};
+    std::vector<std::vector<Model>> ModelManager::models(GLEEC_WINDOW_MAX_WINDOWS);
 
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-    Internal::Graphics::vk::DescriptorBuffer ModelManager::modelBuffer = {};
+    ShaderResource ModelManager::modelBuffer = {};
 #endif
 
     inline void ModelManager::init()
     {
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-        modelBuffer = Internal::Graphics::vk::createDescriptorBuffer(
-            GPUManager::activeGPU.device.physicalDevice,
-            GPUManager::activeGPU.device,
-            GPUManager::activeGPU.allocator,
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0,
-            ShaderManager::getShaders("cl").descriptorSetLayouts.at(
-                GeometryManager::uniformBuffer));
+        modelBuffer = ShaderResourceManager::createUniformBufferShaderResource(
+            ShaderManager::getShaders("cl"), MODEL_SET);
 #endif
     }
 
     inline void ModelManager::destroy()
     {
-#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-        Internal::Graphics::vk::destroyDescriptorBuffer(
-            GPUManager::activeGPU.allocator, modelBuffer);
-#endif
+        for (size_t i = 0; i < models.size(); ++i)
+        {
+            destroyModels(i);
+        }
+    }
 
-        for (Model& model : models)
+    void ModelManager::destroyModels(size_t i)
+    {
+        for (Model& model : models.at(i))
         {
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
             Internal::Graphics::vk::destroyBuffer(
@@ -42,9 +43,9 @@ namespace GLEEC::Graphics
         }
     }
 
-    inline Model& ModelManager::createModel(Geometry& geometry)
+    inline Model& ModelManager::createModel(Geometry& geometry, size_t i)
     {
-        Model& model = models.emplace_back();
+        Model& model = models.at(i).emplace_back();
         model.geometry = &geometry;
 
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
@@ -52,53 +53,29 @@ namespace GLEEC::Graphics
         model.uniformBuffer = BufferManager::createUniformBuffer(
             sizeof(model.model), &model.model(0, 0));
 
-        model.bufferIndex = Internal::Graphics::vk::getUniformBufferDescriptor(
-            GPUManager::activeGPU.device.physicalDevice,
-            GPUManager::activeGPU.device,
-            GPUManager::activeGPU.allocator,
-            modelBuffer, model.uniformBuffer.buffer);
+        ShaderResourceManager::addUniformBuffer(modelBuffer, model.uniformBuffer);
 #endif
 
         return model;
     }
 
-    inline void ModelManager::renderModels(const FrameData& frame)
+    inline void ModelManager::renderModels()
     {
-        for (const Model& model : models)
+        for (uint32_t i : Window::WindowManager::availableWindows())
         {
-#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-            std::vector<Internal::Graphics::vk::DescriptorBuffer> descriptorBuffers(3);
+            FrameData& frame = FrameManager::frame(i);
 
-            descriptorBuffers[GeometryManager::uniformBuffer] = modelBuffer;
-            descriptorBuffers[GeometryManager::colorBuffer] =
-                model.geometry->colorDescriptorBuffer;
-            descriptorBuffers[GeometryManager::textureBuffer] =
-                model.geometry->textureDescriptorBuffer;
+            CameraManager::useCamera(frame, CameraManager::defaultFPSCamera(Window::WindowManager::windows.at(i)));
 
-            memcpy_s(model.uniformBuffer.buffer.map, sizeof(model.model),
-                &model.model(0, 0), sizeof(model.model));
+            for (const Model& model : models.at(i))
+            {
+                BufferManager::updateUniformBuffer(model.uniformBuffer,
+                    &model.model(0, 0));
 
-            Internal::Graphics::vk::cmdBindDescriptorBuffers(
-                GPUManager::activeGPU.device,
-                frame.commandBuffer, descriptorBuffers);
-#endif
+                ShaderResourceManager::use(frame, modelBuffer, model.uniformBuffer);
 
-            GeometryManager::drawGeometry(frame, *model.geometry,
-                model.bufferIndex);
+                GeometryManager::drawGeometry(frame, *model.geometry);
+            }
         }
-    }
-
-    inline void ModelManager::renderModels(const Frame& frame)
-    {
-#if GLEEC_USE_FRAMES_IN_FLIGHT
-        renderModels(frame.frames[FrameManager::activeFrame]);
-#else
-        renderModels(frame.frame);
-#endif
-    }
-
-    inline void ModelManager::renderModels(size_t i)
-    {
-        renderModels(FrameManager::frames[i]);
     }
 }

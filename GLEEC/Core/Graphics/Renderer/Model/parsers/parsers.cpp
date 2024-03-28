@@ -1,17 +1,20 @@
 #include "Core/Graphics/Renderer/Model/GeometryManager.h"
+
+#include "Core/Graphics/Renderer/ShaderResourceManager.h"
 #include "obj.h"
 #include "mtl.h"
 
 #include "Core/Graphics/TextureManager.h"
 #include "Core/Graphics/BufferManager.h"
 #include "Core/Graphics/GPUManager.h"
-#include "Core/Graphics/InstanceManager.h"
-#include "Core/Graphics/ShaderManager.h"
+#include "Core/Graphics/Renderer/ShaderManager.h"
 
 #include <array>
 #include <fstream>
 #include <unordered_map>
 #include <algorithm>
+
+#include "math/utility/print.h"
 
 namespace GLEEC::Graphics::parsers
 {
@@ -405,71 +408,34 @@ namespace GLEEC::Graphics::parsers
         }
 
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-        if (!colorMaterials.empty())
-        {
-            geometry.colorDescriptorBuffer =
-                Internal::Graphics::vk::createDescriptorBuffer(
-                    GPUManager::activeGPU.device.physicalDevice,
-                    GPUManager::activeGPU.device,
-                    GPUManager::activeGPU.allocator,
-                    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0,
-                    ShaderManager::getShaders("cl").descriptorSetLayouts[
-                        GeometryManager::colorBuffer]);
-        }
-
         for (auto& [_, material] : colorMaterials)
         {
             material.colorBuffer = BufferManager::createUniformBuffer(
-                sizeof(math::vec4));
+                sizeof(math::fvec4));
 
-            /* material.offset = geometry.colorDescriptorBuffer.descriptors *
-                geometry.colorDescriptorBuffer.descriptorSize; */
+            math::fvec4 col(material.diffuse, material.d);
+            BufferManager::updateUniformBuffer(material.colorBuffer, &col.x);
 
             material.shaderClass =
                 std::hash<std::string_view>{}("cl");
 
-            material.offset = Internal::Graphics::vk::getUniformBufferDescriptor(
-                GPUManager::activeGPU.device.physicalDevice,
-                GPUManager::activeGPU.device,
-                GPUManager::activeGPU.allocator,
-                geometry.colorDescriptorBuffer, material.colorBuffer.buffer);
+            material.offset = ShaderResourceManager::addUniformBuffer(
+                GeometryManager::colorResource, material.colorBuffer);
+
+            material.type = COLOR_MATERIAL;
 
             geometry.colorMaterials.push_back(std::move(material));
         }
 
-        if (!textureMaterials.empty())
-        {
-            geometry.textureDescriptorBuffer =
-                Internal::Graphics::vk::createDescriptorBuffer(
-                    GPUManager::activeGPU.device.physicalDevice,
-                    GPUManager::activeGPU.device,
-                    GPUManager::activeGPU.allocator,
-                    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0,
-                    ShaderManager::getShaders("uv").descriptorSetLayouts[
-                        GeometryManager::textureBuffer]);
-        }
-
         for (auto& [_, material] : textureMaterials)
         {
-            material.imageView = Internal::Graphics::vk::createColorImageView2D(
-                GPUManager::activeGPU.device,
-                material.texture.image, material.texture.image.format);
-
-            material.sampler = Internal::Graphics::vk::createSampler(
-                GPUManager::activeGPU.device);
-
-            /* material.offset = geometry.textureDescriptorBuffer.descriptors *
-                geometry.textureDescriptorBuffer.descriptorSize; */
-
             material.shaderClass =
                 std::hash<std::string_view>{}("uv");
 
-            material.offset = Internal::Graphics::vk::getCombinedImageSamplerDescriptor(
-                GPUManager::activeGPU.device.physicalDevice,
-                GPUManager::activeGPU.device,
-                GPUManager::activeGPU.allocator,
-                geometry.textureDescriptorBuffer,
-                material.sampler, material.imageView);
+            material.offset = ShaderResourceManager::addCombinedImage(
+                GeometryManager::textureResource, material.texture);
+
+            material.type = TEXTURE_MATERIAL;
 
             geometry.textureMaterials.push_back(std::move(material));
         }

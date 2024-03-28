@@ -2,8 +2,13 @@
 
 #include "Mesh.h"
 
+#include "Core/Graphics/Renderer/ShaderResource.h"
+
 namespace GLEEC::Graphics
 {
+    // TODO: have materials reference meshes instead of vice versa
+    // that way descriptor set stuff is more efficient
+    //
     // a geometry is a unique representation of data loaded once.
     // model is what has the rendering data stuff
     struct Geometry
@@ -12,11 +17,6 @@ namespace GLEEC::Graphics
 
         std::vector<ColorMaterial> colorMaterials = {};
         std::vector<TextureMaterial> textureMaterials = {};
-
-#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-        Internal::Graphics::vk::DescriptorBuffer colorDescriptorBuffer = {};
-        Internal::Graphics::vk::DescriptorBuffer textureDescriptorBuffer = {};
-#endif
 
         std::string filepath = "";
     };

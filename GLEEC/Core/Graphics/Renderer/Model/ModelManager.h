@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Config/Export.h"
-#include "Core/Graphics/Frame.h"
+#include "Core/Graphics/Renderer/FrameManager.h"
 
 #include "GeometryManager.h"
 #include "Model.h"
@@ -10,33 +9,26 @@ namespace GLEEC::Graphics
 {
     struct ModelManager
     {
-        static Model& createModel(std::string_view filepath)
+        static Model& createModel(std::string_view filepath, size_t i = 0)
         {
-            return createModel(GeometryManager::findGeometry(filepath));
+            return createModel(GeometryManager::findGeometry(filepath), i);
         }
 
         GLEEC_API static void init();
         GLEEC_API static void destroy();
 
-        GLEEC_API static void renderModels(const FrameData& frame);
-        GLEEC_API static void renderModels(const Frame& frame);
+        GLEEC_API static void destroyModels(size_t i);
 
-        GLEEC_API static void renderModels(size_t index);
+        GLEEC_API static void renderModels();
 
-        // the default place to render is the first window (main window)
-        static void renderModels()
-        {
-            renderModels(0);
-        }
-
-        GLEEC_API static std::vector<Model> models;
+        GLEEC_API static std::vector<std::vector<Model>> models;
 
     private:
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-        GLEEC_API static Internal::Graphics::vk::DescriptorBuffer modelBuffer;
+        GLEEC_API static ShaderResource modelBuffer;
 #endif
 
-        GLEEC_API static Model& createModel(Geometry& geometry);
+        GLEEC_API static Model& createModel(Geometry& geometry, size_t i);
 
         static size_t key(std::string_view filepath)
         {

@@ -1,9 +1,10 @@
 #pragma once
 
-#include "Core/Graphics/Buffer.h"
 #include "Geometry.h"
 
 #include "math/utility/defines.h"
+
+#include "Core/Graphics/Buffer.h"
 
 namespace GLEEC::Graphics
 {

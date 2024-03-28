@@ -2,12 +2,8 @@
 
 #include "Config/Export.h"
 
-#include "Core/Graphics/Frame.h"
+#include "Core/Graphics/Renderer/Frame.h"
 #include "Geometry.h"
-
-#if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-#include "Internal/Graphics/vk/DescriptorBuffer.h"
-#endif
 
 #include <unordered_map>
 
@@ -17,38 +13,30 @@ namespace GLEEC::Graphics
     {
         static Geometry& findGeometry(std::string_view filepath)
         {
-            if (models.contains(key(filepath)))
+            if (geometries.contains(key(filepath)))
             {
-                return models.at(key(filepath));
+                return geometries.at(key(filepath));
             }
 
             return createGeometry(filepath);
         }
 
-        static void destroy()
-        {
-            for (auto& [_, model] : models)
-            {
-                destroyGeometry(model);
-            }
-        }
-
-        static constexpr uint32_t uniformBuffer = 0;
-        static constexpr uint32_t colorBuffer = 1;
-        static constexpr uint32_t textureBuffer = 2;
+        GLEEC_API static void init();
+        GLEEC_API static void destroy();
 
         GLEEC_API static void drawGeometry(const FrameData& frame,
-            const Geometry& geometry, VkDeviceSize uniformBufferOffset);
+            const Geometry& geometry);
 
-        GLEEC_API static std::unordered_map<size_t, Geometry> models;
+        GLEEC_API static std::unordered_map<size_t, Geometry> geometries;
 
-    private:
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
-        GLEEC_API static Internal::Graphics::vk::DescriptorBuffer modelBuffer;
+        GLEEC_API static ShaderResource colorResource;
+        GLEEC_API static ShaderResource textureResource;
 #endif
 
+    private:
         GLEEC_API static Geometry& createGeometry(std::string_view filepath);
-        GLEEC_API static void destroyGeometry(Geometry& model);
+        GLEEC_API static void destroyGeometry(Geometry& geometry);
 
         static size_t key(std::string_view filepath)
         {

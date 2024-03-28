@@ -20,7 +20,7 @@ namespace GLEEC::Graphics
 #if GLEEC_GRAPHICS_BACKEND == GRAPHICS_BACKEND_VK
         VkCommandBuffer commandBuffer = frame.commandBuffer;
         
-        if (window.minimized)
+        if (!Window::WindowManager::availableWindows().contains(i))
         {
             Internal::Graphics::vk::cmdSetRasterizerDiscardEnable(commandBuffer,
                 true);
@@ -31,15 +31,17 @@ namespace GLEEC::Graphics
         Internal::Graphics::vk::cmdSetRasterizerDiscardEnable(commandBuffer,
             !state.enableRendering);
 
+        math::ivec2 size = Window::WindowManager::Get::size(window);
+
         VkViewport viewport = {};
-        viewport.width = static_cast<float>(window.size().x);
-        viewport.height = static_cast<float>(window.size().y);
+        viewport.width = static_cast<float>(size.x);
+        viewport.height = static_cast<float>(size.y);
 
         Internal::Graphics::vk::cmdSetViewport(commandBuffer, viewport);
 
         VkRect2D scissor = {};
-        scissor.extent.width = window.size().x;
-        scissor.extent.height = window.size().y;
+        scissor.extent.width = size.x;
+        scissor.extent.height = size.y;
 
         Internal::Graphics::vk::cmdSetScissor(commandBuffer, scissor);
 
